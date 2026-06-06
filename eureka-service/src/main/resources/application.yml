@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: eureka-service
+
+server:
+  port: 8555
+
+eureka:
+  instance:
+    prefer-ip-address: true
+
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://localhost:8555/eureka/
+
+  server:
+    enable-self-preservation: false
+    eviction-interval-timer-in-ms: 5000
+    wait-time-in-ms-when-sync-empty: 0

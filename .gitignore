@@ -1,0 +1,27 @@
+# Maven build output
+target/
+*.class
+*.jar
+*.war
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Claude AI files
+.claude/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+*.env
+application-prod.properties
+application-secret.properties
+
+# Logs
+*.log
+logs/

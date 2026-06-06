@@ -1,0 +1,45 @@
+
+pipeline {
+  agent any
+
+  tools {
+    maven 'maven'
+  }
+
+  stages {
+    stage('Checkout SCM') {
+      steps {
+       checkout([$class: 'GitSCM',
+                          branches: [[name: 'main']], // Specify the branch to checkout
+                          doGenerateSubmoduleConfigurations: false,
+                          extensions: [[$class: 'CleanCheckout'],
+                                       [$class: 'SparseCheckoutPaths', sparseCheckoutPaths: [[path: 'mysales-microservice/employee-service']]]], 
+                          submoduleCfg: [],
+                          userRemoteConfigs: [[url: 'https://github.com/techymeet/mysalesmicroservices2.0.git']]])
+      }
+    }
+
+    stage('Build') {
+
+      environment {
+       JAVA_HOME = 'C:/Program Files/Java/jdk-17.0.2'
+        PATH = "${env.JAVA_HOME}\\bin;${env.PATH}"
+      }
+      steps {
+        dir('F:/Softwares/JenkinsHome/.jenkins/workspace/mysales-int/employee-service/mysales-microservice/employee-service') {
+          bat 'mvn clean -Dmaven.test.skip package'
+        }
+      }
+    }
+
+ stage('Run') {    
+      steps {
+        script {
+          def jarFilePath = 'F:/Softwares/JenkinsHome/.jenkins/workspace/mysales-int/employee-service/mysales-microservice/employee-service/target/employee-service-0.0.1-SNAPSHOT.jar'
+          def batchScript = "cmd /c \"java -jar ${jarFilePath}\""
+          bat label: 'Run JAR in Background', script: batchScript
+        }
+      }
+    }
+  }
+}
