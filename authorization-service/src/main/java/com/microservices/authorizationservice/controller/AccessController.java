@@ -35,6 +35,8 @@ import javax.validation.constraints.Min;
 
 public class AccessController {
 
+	String java = "hii";
+
 	@Autowired
 	AccessService accessService;
 
