@@ -109,13 +109,13 @@ public class AccessController {
 		if ((access != null) && (access.getAccessId() > 0)) {
 
 				if (accessService.updateAccess(access)) {
-					return ResponseEntity.ok().body(true);
+					return ResponseEntity.ok(new ApiResponse<>(true, "Access is updated Successfully"));
 				} else {
-					return ResponseEntity.internalServerError().body("Access Updation Failed");
+					return ResponseEntity.ok(new ApiResponse<>(true, "Access updated Failed"));
 				}
 
 		} else {
-			return ResponseEntity.badRequest().body("Access id should be greater than zero");
+			return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Id Should be Greter than 0"));
 
 		}
 	}
