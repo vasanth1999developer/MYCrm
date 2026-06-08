@@ -125,16 +125,15 @@ public class AccessController {
 		try {
 			if (accessId > 0) {
 				if (accessService.deleteAccess(accessId)) {
-					return ResponseEntity.ok().body(true);
+					return ResponseEntity.ok(new ApiResponse<>(true, "Access is Deleted"));
 				} else {
-					return ResponseEntity.internalServerError().body("Access deletion failed");
+					return ResponseEntity.internalServerError().body(new ApiResponse<>(false, "Access Deletion is Failed"));
 				}
 			} else {
-				return ResponseEntity.badRequest().body("Access id should be greater than zero");
+				return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Id Should be Greter than 0"));
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal Server Error");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse<>(false, "InternalServer Error"));
 		}
 
 	}
@@ -144,13 +143,12 @@ public class AccessController {
 		try {
 			Set<AccessBo> accessPage = accessService.listAllAccesses();
 			if (accessPage != null) {
-				return ResponseEntity.ok(accessPage);
+				return ResponseEntity.ok(new ApiResponse<>(false, "fetched Successfully",accessPage));
 			} else {
-				return ResponseEntity.internalServerError().body("Error while fetching set of Accesses");
+				return ResponseEntity.internalServerError().body(new ApiResponse<>(false, "Error while fetching set of Accesses"));
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
-			return ResponseEntity.internalServerError().body("Internal Server Error");
+			return ResponseEntity.internalServerError().body(new ApiResponse<>(false, "Internal Server Error"));
 		}
 	}
 
