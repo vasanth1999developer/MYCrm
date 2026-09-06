@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 //@CrossOrigin(origins="*")
@@ -21,7 +23,7 @@ public class PrivilegeController {
     public PrivilegeService service;
 
     @GetMapping("check-duplicate")
-    public ResponseEntity<ApiResponse<?>> checkDuplicateName(@RequestParam("privilegeName") String privilegeName) {
+    public ResponseEntity<ApiResponse<Boolean>> checkDuplicateName(@RequestParam("privilegeName") String privilegeName) {
 
         if (privilegeName == null || privilegeName.trim().isEmpty()) {
             throw new IllegalArgumentException("privilege name cannot be null or empty");
@@ -32,11 +34,11 @@ public class PrivilegeController {
 
         if (status) {
             return new ResponseEntity<>(
-                    new ApiResponse<>(false, "Duplicate is there..", true), HttpStatus.CONFLICT
+                     ApiResponse.error( "Duplicate is there.."),HttpStatus.CONFLICT
             );
         } else {
             return ResponseEntity.ok(
-                    new ApiResponse<>(true, "privilege name is available", false)
+                     ApiResponse.error( "privilege name is available")
             );
         }
 
@@ -51,10 +53,10 @@ public class PrivilegeController {
         if (privilegeBoResponse == null){
 
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>(false, "privilege creation is failed"));
+                    .body( ApiResponse.error( "privilege creation is failed"));
         }
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new ApiResponse<>(true, "privilege created successfully", privilegeBoResponse));
+                .body( ApiResponse.success( "privilege created successfully", privilegeBoResponse));
     }
 
     @GetMapping("list/{pageIndex}/{pageSize}")
@@ -84,15 +86,15 @@ public class PrivilegeController {
 
 
             if (privilegeId > 0) {
-                return ResponseEntity.badRequest().body(new ApiResponse<>(false,"Please provide a valid Privilege ID"));
+                return ResponseEntity.badRequest().body( ApiResponse.error("Please provide a valid Privilege ID"));
 
             }
 
            PrivilegeBo  privilegeBo = service.findIdByPrivilege(privilegeId);
         if (null != privilegeBo) {
-            return ResponseEntity.ok(new ApiResponse<>(true, "fetched successfully", privilegeBo));
+            return ResponseEntity.ok( ApiResponse.success( "fetched successfully", privilegeBo));
         }
-           return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse<>(false,"Privilege is not fount for the ID "+privilegeId));
+           return ResponseEntity.status(HttpStatus.NOT_FOUND).body( ApiResponse.error("Privilege is not fount for the ID "+privilegeId));
 
     }
 
@@ -141,6 +143,19 @@ public class PrivilegeController {
             e.printStackTrace();
             return ResponseEntity.internalServerError().body("Internal Server Error");
         }
+    }
+
+
+    @PostMapping("/bulk")
+    public ResponseEntity<List<PrivilegeBo>> createPrivileges(@RequestBody List<PrivilegeBo> privilegeBos) {
+        List<PrivilegeBo> saved = new ArrayList<>();
+        for (PrivilegeBo bo : privilegeBos) {
+            PrivilegeBo result = service.createPrivilege(bo);
+            if (result != null) {
+                saved.add(result);
+            }
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
 }

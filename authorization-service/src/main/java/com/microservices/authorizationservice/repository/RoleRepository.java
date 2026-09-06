@@ -13,5 +13,6 @@ public interface RoleRepository extends JpaRepository<RoleVo, Integer> {
 	Page<RoleVo> findAllByIsDeleted(boolean isDeleted, Pageable pageable);
 	
 	Page<RoleVo> findAllByRoleNameContainingIgnoreCaseAndIsDeleted(String searchtext, boolean isDeleted, Pageable pageable);
-	
+
+    boolean existsByRoleName(String roleName);
 }

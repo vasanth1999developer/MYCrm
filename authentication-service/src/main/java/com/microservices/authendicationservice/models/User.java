@@ -9,12 +9,13 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
 @Entity
-@Table(	name = "users", 
-		uniqueConstraints = { 
-			@UniqueConstraint(columnNames = "username"),
-			@UniqueConstraint(columnNames = "email") 
+@Table(name = "users",
+		uniqueConstraints = {
+				@UniqueConstraint(columnNames = "username"),
+				@UniqueConstraint(columnNames = "email")
 		})
 public class User {
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -31,17 +32,14 @@ public class User {
 	@NotBlank
 	@Size(max = 120)
 	private String password;
-	
-	
-	private boolean isDelete;
-	
-	
 
-	@ManyToMany(fetch = FetchType.LAZY)
-	@JoinTable(	name = "user_roles", 
-				joinColumns = @JoinColumn(name = "user_id"), 
-				inverseJoinColumns = @JoinColumn(name = "role_id"))
-	private Set<Role> roles = new HashSet<>();
+	private boolean isDelete;
+
+	// ---- CHANGED: role names as plain strings, not a @ManyToMany to a Role table ----
+	@ElementCollection(fetch = FetchType.EAGER)
+	@CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+	@Column(name = "role_name")
+	private Set<String> roles = new HashSet<>();
 
 	public User() {
 	}
@@ -52,53 +50,22 @@ public class User {
 		this.password = password;
 	}
 
-	public Long getId() {
-		return id;
-	}
+	public Long getId() { return id; }
+	public void setId(Long id) { this.id = id; }
 
-	public void setId(Long id) {
-		this.id = id;
-	}
+	public String getUsername() { return username; }
+	public void setUsername(String username) { this.username = username; }
 
-	public String getUsername() {
-		return username;
-	}
+	public String getEmail() { return email; }
+	public void setEmail(String email) { this.email = email; }
 
-	public void setUsername(String username) {
-		this.username = username;
-	}
+	public String getPassword() { return password; }
+	public void setPassword(String password) { this.password = password; }
 
-	public String getEmail() {
-		return email;
-	}
+	// ---- CHANGED: now Set<String> instead of Set<Role> ----
+	public Set<String> getRoles() { return roles; }
+	public void setRoles(Set<String> roles) { this.roles = roles; }
 
-	public void setEmail(String email) {
-		this.email = email;
-	}
-
-	public String getPassword() {
-		return password;
-	}
-
-	public void setPassword(String password) {
-		this.password = password;
-	}
-
-	public Set<Role> getRoles() {
-		return roles;
-	}
-
-	public void setRoles(Set<Role> roles) {
-		this.roles = roles;
-	}
-
-	public boolean getIsDelete() {
-		return isDelete;
-	}
-
-	public void setDelete(boolean isDelete) {
-		this.isDelete = isDelete;
-	}
-	
-	
+	public boolean getIsDelete() { return isDelete; }
+	public void setDelete(boolean isDelete) { this.isDelete = isDelete; }
 }
