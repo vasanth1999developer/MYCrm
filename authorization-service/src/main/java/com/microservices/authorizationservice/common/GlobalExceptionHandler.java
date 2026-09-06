@@ -24,8 +24,8 @@ public class GlobalExceptionHandler {
                 .findFirst()
                 .orElse("Validation error");
 
-        ApiResponse error = new ApiResponse(
-                false,
+        ApiResponse error =  ApiResponse.error(
+
                 message,
                 null
         );
@@ -37,8 +37,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleDuplicate(
             DuplicateResourceException ex) {
 
-        ApiResponse<Object> response = new ApiResponse<>(
-                false,
+        ApiResponse<Object> response =  ApiResponse.error(
+
                 ex.getMessage(),
                 null
         );
@@ -50,8 +50,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleBadRequest(
             IllegalArgumentException ex) {
 
-        ApiResponse<Object> response = new ApiResponse<>(
-                false,
+        ApiResponse<Object> response = ApiResponse.error(
+
                 ex.getMessage(),
                 null
         );
@@ -62,8 +62,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse> handleGlobal(Exception ex) {
 
-        ApiResponse error = new ApiResponse(
-                false,
+        ApiResponse error =  ApiResponse.error(
+
                 "Internal server error",
                 null
         );
@@ -77,8 +77,8 @@ public class GlobalExceptionHandler {
 
         String message = ex.getMessage();
 
-        ApiResponse response = new ApiResponse(
-                false,
+        ApiResponse response =  ApiResponse.error(
+
                 message,
                 null
         );

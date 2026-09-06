@@ -25,30 +25,12 @@ import java.util.Set;
 public class AccessController {
 
 
-    @Autowired
-    AccessService accessService;
+    private final AccessService accessService;
 
-    @GetMapping("/check-duplicate")
-    public ResponseEntity<ApiResponse<Boolean>> isDuplicateAccess(@RequestParam("accessName") String accessName) {
-
-        if (accessName == null || accessName.trim().isEmpty()) {
-            throw new IllegalArgumentException("Access name cannot be null or empty");
-        }
-
-        boolean isDuplicate = accessService.isDuplicateAccess(accessName);
-
-        if (isDuplicate) {
-            return new ResponseEntity<>(
-                    new ApiResponse<>(false, "Duplicate is there..", true), HttpStatus.CONFLICT
-            );
-
-        } else {
-            return ResponseEntity.ok(
-                    new ApiResponse<>(true, "Access name is available", false)
-            );
-        }
-
+    public AccessController(AccessService accessService) {
+        this.accessService = accessService;
     }
+
 
     @PostMapping("/create")
     public ResponseEntity<ApiResponse<AccessVo>> createAccess(
@@ -57,23 +39,25 @@ public class AccessController {
         AccessVo savedAccess = accessService.createAccess(accessBo);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new ApiResponse<>(true, "Access created successfully", savedAccess));
+                .body( ApiResponse.success( "Access created successfully", savedAccess));
     }
 
     @GetMapping("/get-access/{accessId}")
     public ResponseEntity<?> getAccess(
             @PathVariable @Min(value = 1, message = "Access id should be greater than zero") int accessId) {
-
         AccessBo access = accessService.getAccessByAccessId(accessId);
 
         if (access == null) {
-            throw new ResourceNotFoundException("Access not found");
+            return ResponseEntity.ok(
+                    ApiResponse.success( "pls Enter Proper Access Id" )
+            );
         }
 
         return ResponseEntity.ok(
-                new ApiResponse<>(true, "Access fetched", access)
+                 ApiResponse.success( "Access fetched", access)
         );
     }
+
 
     @GetMapping("/list")
     public ResponseEntity<ApiResponse<PaginatedResponse<AccessBo>>> listAccesses(
@@ -85,7 +69,7 @@ public class AccessController {
 
         if (size <= 0) {
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse<>(false, "Size must be greater than 0", null));
+                    .body( ApiResponse.error( "Size must be greater than 0", null));
         }
 
         if (size > 50) size = 50;
@@ -94,7 +78,7 @@ public class AccessController {
                 accessService.getAccess(page, size, searchText, sortBy, direction);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(true, "Access fetched successfully", response)
+                 ApiResponse.success( "Access fetched successfully", response)
         );
     }
 
@@ -104,13 +88,13 @@ public class AccessController {
         if ((access != null) && (access.getAccessId() > 0)) {
 
             if (accessService.updateAccess(access)) {
-                return ResponseEntity.ok(new ApiResponse<>(true, "Access is updated Successfully"));
+                return ResponseEntity.ok( ApiResponse.success( "Access is updated Successfully"));
             } else {
-                return ResponseEntity.ok(new ApiResponse<>(true, "Access updated Failed"));
+                return ResponseEntity.ok( ApiResponse.error( "Access updated Failed"));
             }
 
         } else {
-            return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Id Should be Greter than 0"));
+            return ResponseEntity.badRequest().body( ApiResponse.error( "Id Should be Greter than 0"));
 
         }
     }
@@ -120,15 +104,15 @@ public class AccessController {
         try {
             if (accessId > 0) {
                 if (accessService.deleteAccess(accessId)) {
-                    return ResponseEntity.ok(new ApiResponse<>(true, "Access is Deleted"));
+                    return ResponseEntity.ok( ApiResponse.success( "Access is Deleted"));
                 } else {
-                    return ResponseEntity.internalServerError().body(new ApiResponse<>(false, "Access Deletion is Failed"));
+                    return ResponseEntity.internalServerError().body( ApiResponse.error("Access Deletion is Failed"));
                 }
             } else {
-                return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Id Should be Greter than 0"));
+                return ResponseEntity.badRequest().body( ApiResponse.error( "Id Should be Greter than 0"));
             }
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse<>(false, "InternalServer Error"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body( ApiResponse.error( "InternalServer Error"));
         }
 
     }
@@ -138,12 +122,12 @@ public class AccessController {
         try {
             Set<AccessBo> accessPage = accessService.listAllAccesses();
             if (accessPage != null) {
-                return ResponseEntity.ok(new ApiResponse<>(false, "fetched Successfully", accessPage));
+                return ResponseEntity.ok( ApiResponse.success( "fetched Successfully", accessPage));
             } else {
-                return ResponseEntity.internalServerError().body(new ApiResponse<>(false, "Error while fetching set of Accesses"));
+                return ResponseEntity.internalServerError().body( ApiResponse.error( "Error while fetching set of Accesses"));
             }
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(new ApiResponse<>(false, "Internal Server Error"));
+            return ResponseEntity.internalServerError().body( ApiResponse.error( "Internal Server Error"));
         }
     }
 
