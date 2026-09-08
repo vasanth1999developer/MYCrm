@@ -11,7 +11,7 @@ This project follows a **Microservices architecture** with each service
 handling a specific business domain.
 
 ```
-Client → API Gateway → Eureka (Service Discovery) → Microservices → PostgreSQL
+Client → API Gateway → Eureka (Service Discovery) → Microservices → DB
 ```
 
 ---
