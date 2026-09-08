@@ -75,6 +75,21 @@ public class EmployeeServiceImpl implements EmployeeService {
 		return employee;
 	}
 
+	@Override
+	public List<EmployeeBo> getAllEmployees() {
+
+		List<EmployeeVo> employeeVo = employeeRepository.findAllByIsDeleted(false);
+
+		List<EmployeeBo>  employeeBo = new ArrayList<EmployeeBo>();
+
+		 for (EmployeeVo employeeVo1 : employeeVo) {
+			 EmployeeBo  employeeBo1 = new EmployeeBo();
+			 BeanUtils.copyProperties(employeeVo1, employeeBo1);
+			 employeeBo.add(employeeBo1);
+		 }
+
+		return employeeBo;
+	}
 
 
 }
