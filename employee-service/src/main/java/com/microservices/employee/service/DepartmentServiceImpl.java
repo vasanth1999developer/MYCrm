@@ -1,5 +1,6 @@
 package com.microservices.employee.service;
 
+import com.microservices.employee.common.DuplicateResourceException;
 import com.microservices.employee.entity.DepartmentVo;
 import com.microservices.employee.model.DepartmentBo;
 import com.microservices.employee.repository.DepartmentRepository;

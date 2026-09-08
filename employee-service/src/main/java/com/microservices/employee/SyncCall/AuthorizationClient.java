@@ -10,4 +10,5 @@ public interface AuthorizationClient {
 
     @GetMapping("/authorization/role/exists")
     ApiResponse<Boolean> roleExists(@RequestParam("roleName") String roleName);
+
 }

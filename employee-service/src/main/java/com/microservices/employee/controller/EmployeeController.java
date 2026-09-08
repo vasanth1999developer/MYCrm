@@ -8,15 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.microservices.employee.model.EmployeeBo;
 import com.microservices.employee.service.EmployeeService;
@@ -43,6 +35,35 @@ public class EmployeeController {
 		return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Employee is Created",employeeResponse));
 
 	}
+
+
+	@GetMapping("/list-employee")
+	public ResponseEntity<ApiResponse<List<EmployeeBo>>> getAllEmployee(){
+
+
+         List<EmployeeBo> employeeList = List.of();
+
+		 try{
+
+			 employeeList =  employeeService.getAllEmployees();
+
+
+		 }
+         catch (Exception e) {
+			 e.printStackTrace();
+
+			 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
+		 }
+
+		return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Employee is Created",employeeList));
+    }
+
+
+
+
+
+
+
 
 
 
