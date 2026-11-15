@@ -8,6 +8,8 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.Data;
 
 @Data
@@ -33,6 +35,8 @@ public class CompanyVO {
 		private long createdBy;
 		private long modifiedBy;
 		private String companyWebsite;
+		/** Never serialized: GET /company/get-companyList returns this entity directly. */
+		@JsonIgnore
 		private String password;
 		private String industryType;
 		private String address;

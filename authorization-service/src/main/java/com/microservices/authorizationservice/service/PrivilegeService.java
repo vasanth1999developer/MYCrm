@@ -22,15 +22,7 @@ public interface PrivilegeService {
 	boolean deletePrivilege(int privilegeId);
 	
 	Set<PrivilegeBo> listAllPrivileges();
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
 
+
+    Set<String> getPrivilegeNamesByRoleNames(Set<String> roleNames);
 }
