@@ -5,6 +5,13 @@
 
     <modelVersion>4.0.0</modelVersion>
 
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.7.15</version>
+        <relativePath/>
+    </parent>
+
     <groupId>com.mycrm</groupId>
     <artifactId>mycrm-parent</artifactId>
     <version>1.0.0</version>
@@ -29,21 +36,13 @@
         <module>urlshortner</module>
     </modules>
 
+    <!--
+        Single source of Java level, plugin versions and Spring Boot dependency versions for
+        every child module. Children must NOT hard-code maven-compiler-plugin source/target;
+        java.version below is turned into release=17 by the Boot parent.
+    -->
     <properties>
         <java.version>17</java.version>
-        <spring.boot.version>2.7.15</spring.boot.version>
     </properties>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>${spring.boot.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
 </project>

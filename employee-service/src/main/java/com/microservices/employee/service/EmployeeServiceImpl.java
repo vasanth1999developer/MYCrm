@@ -54,9 +54,6 @@ public class EmployeeServiceImpl implements EmployeeService {
 		);
 		Long userId = authClient.createUser(userReq).getData();
 
-
-
-
 		try {
 
 			EmployeeVo employeeVo = new EmployeeVo();

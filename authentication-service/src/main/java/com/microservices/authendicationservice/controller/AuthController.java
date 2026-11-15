@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import javax.validation.Valid;
 
 import com.microservices.authendicationservice.response.ApiResponse;
+import com.microservices.authendicationservice.services.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -53,49 +54,63 @@ public class AuthController {
 	@Autowired
 	JwtUtils jwtUtils;
 
+	@Autowired
+	AuthService authService;
+
+//	@PostMapping("/signin")
+//	public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequestDto loginRequest) {
+//
+//		Authentication authentication = authenticationManager.authenticate(
+//				new UsernamePasswordAuthenticationToken(
+//						loginRequest.getUsername(),
+//						loginRequest.getPassword()
+//				)
+//		);
+//
+//		SecurityContextHolder.getContext().setAuthentication(authentication);
+//
+//		UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+//
+//			if (userDetails.getIsDelete()) {
+//				return ResponseEntity
+//						.status(HttpStatus.FORBIDDEN)
+//						.body( ApiResponse.error(
+//
+//								"User account is deactivated",
+//								null));
+//			}
+//
+//		String jwt = jwtUtils.generateJwtToken(authentication);
+//		List<String> roles = userDetails.getAuthorities().stream().map(item -> item.getAuthority())
+//				.collect(Collectors.toList());
+//
+//		JwtResponse response = new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), userDetails.getEmail(), roles);
+//
+//		return ResponseEntity
+//				.status(HttpStatus.OK)
+//				.body( ApiResponse.success(
+//
+//						"User authenticated successfully",
+//						response
+//				));
+//
+//
+//
+//	}
+
+
+
 	@PostMapping("/signin")
-	public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequestDto loginRequest) {
+	public ResponseEntity<ApiResponse<JwtResponse>> authenticateUser(
+			@Valid @RequestBody LoginRequestDto loginRequest) {
 
-		Authentication authentication = authenticationManager.authenticate(
-				new UsernamePasswordAuthenticationToken(
-						loginRequest.getUsername(),
-						loginRequest.getPassword()
-				)
-		);
+		JwtResponse response = authService.signIn(loginRequest);
 
-
-		SecurityContextHolder.getContext().setAuthentication(authentication);
-		
-
-		UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-
-
-			if (userDetails.getIsDelete()) {
-				return ResponseEntity
-						.status(HttpStatus.FORBIDDEN)
-						.body( ApiResponse.error(
-
-								"User account is deactivated",
-								null));
-			}
-
-		String jwt = jwtUtils.generateJwtToken(authentication);
-		List<String> roles = userDetails.getAuthorities().stream().map(item -> item.getAuthority())
-				.collect(Collectors.toList());
-
-		JwtResponse response = new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), userDetails.getEmail(), roles);
-
-		return ResponseEntity
-				.status(HttpStatus.OK)
-				.body( ApiResponse.success(
-
-						"User authenticated successfully",
-						response
-				));
-
-
-
+		return ResponseEntity.ok(
+				ApiResponse.success("User authenticated successfully", response));
 	}
+
+
 
 	@PostMapping("/users")   // admin-only
 	public ResponseEntity<ApiResponse<Long>> createUser(@Valid @RequestBody SignupRequestDto request) {

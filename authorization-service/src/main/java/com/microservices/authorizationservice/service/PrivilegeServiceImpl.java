@@ -1,8 +1,12 @@
 package com.microservices.authorizationservice.service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
+import com.microservices.authorizationservice.entity.RoleVo;
 import com.microservices.authorizationservice.repository.AccessRepository;
+import com.microservices.authorizationservice.repository.RoleRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -18,10 +22,14 @@ import com.microservices.authorizationservice.entity.PrivilegeVo;
 import com.microservices.authorizationservice.model.AccessBo;
 import com.microservices.authorizationservice.model.PrivilegeBo;
 import com.microservices.authorizationservice.repository.PrivilegeRepository;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 
+@Slf4j
 @Service
 public class PrivilegeServiceImpl implements PrivilegeService {
+	@Autowired
+	RoleRepository roleRepository;
 
 	@Autowired
 	public PrivilegeRepository repository;
@@ -48,6 +56,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 		try {
 			PrivilegeVo privilegeVo = new PrivilegeVo();
 			BeanUtils.copyProperties(privilegeBo, privilegeVo);
+
 
 			Set<AccessVo> setVo = new HashSet<>();          // was TreeSet — no comparator, no NPE
 			Set<AccessBo> setBo = privilegeBo.getAccesses();
@@ -207,6 +216,30 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 	}
 
 
+
+	@Override
+	@Transactional(readOnly = true)
+	public Set<String> getPrivilegeNamesByRoleNames(Set<String> roleNames) {
+		if (roleNames == null || roleNames.isEmpty()) {
+			return Collections.emptySet();
+		}
+
+		List<RoleVo> roles = roleRepository.findActiveByRoleNames(roleNames);
+
+		log.info("ASKED FOR: {}", roleNames);
+		log.info("ROLES FOUND: {}", roles.size());
+		roles.forEach(r -> log.info("  role '{}' -> privileges: {}",
+				r.getRoleName(),
+				r.getPrivileges() == null ? "NULL" : r.getPrivileges().size()));
+
+		Set<String> result = roles.stream()
+				.flatMap(r -> r.getPrivileges().stream())
+				.map(PrivilegeVo::getPrivilegeName)
+				.collect(Collectors.toCollection(TreeSet::new));
+
+		log.info("RESULT: {}", result.size());
+		return result;
+	}
 
 
 }

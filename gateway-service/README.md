@@ -1,213 +1,123 @@
-# Gateway Service
+# gateway-service
 
-## Overview
+The **single entry point** for all client traffic. It's a Spring Cloud Gateway (reactive / WebFlux) that routes each path prefix to a service found through Eureka. It also **authenticates every request with a JWT**, sets trusted identity headers, and attaches the shared gateway secret that downstream services require.
 
-The Gateway Service is an API Gateway that serves as the single entry point for all client requests in the MySales microservices architecture. Built using Spring Cloud Gateway, it handles request routing, authentication/authorization, and load balancing across multiple backend microservices.
+## At a glance
 
-## Features
+| | |
+|---|---|
+| Port | **8556** |
+| Eureka name | `api-gateway-service` |
+| Database | none |
+| Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.2 · Spring Cloud Gateway · jjwt 0.11.5 |
+| Base package | `com.microservices.apigatewayservice` |
+| Needs | `eureka-service` running; env vars `JWT_SECRET`, `GATEWAY_SECRET` |
 
-- **Centralized Routing**: Routes incoming requests to appropriate microservices based on path patterns
-- **Authentication & Authorization**: JWT token validation for secured endpoints
-- **Load Balancing**: Automatic load balancing using Netflix Eureka
-- **Service Discovery**: Dynamic discovery of microservices via Eureka
-- **CORS Support**: Cross-Origin Resource Sharing configuration
-- **Custom Filters**: Request/response filtering capabilities
-- **Reactive Processing**: Non-blocking request handling using Spring WebFlux
+## Run
 
-## Technologies Used
+```bash
+# JWT_SECRET and GATEWAY_SECRET must be set (same values as the other services)
+mvn spring-boot:run          # or: java -jar target/gateway-service-0.0.1-SNAPSHOT.jar
+```
 
-- **Java**: 17
-- **Spring Boot**: Latest stable version
-- **Spring Cloud**: 2021.0.2
-- **Spring Cloud Gateway**: API gateway framework
-- **Spring Cloud Netflix Eureka Client**: Service discovery client
-- **JWT (JJWT)**: JSON Web Token for authentication (v0.11.5)
-- **Spring WebFlux**: Reactive framework for non-blocking I/O
+It fails at startup with `Could not resolve placeholder 'JWT_SECRET'` / `'GATEWAY_SECRET'` if either is missing.
+
+## Routes
+
+Defined in `src/main/resources/application.properties` (`application.yml` is empty). The discovery locator is **off**, so only these routes exist, and **every** route has `filters=AuthenticationFilter`. A global `Retry=3` default filter applies to all of them. Prefixes are **not** stripped.
+
+| Route id | Path | Target | Backed by |
+|---|---|---|---|
+| `authentication-core` | `/auth/**` | `lb://authentication-service` | authentication-service |
+| `authorization-core` | `/authorization/**` | `lb://authorization-service` | authorization-service |
+| `employee-core` | `/employee/**` | `lb://employee-service` | employee-service |
+| `customer-core` | `/customer/**` | `lb://customer-service` | customer-service |
+| `lead-core` | `/lead/**` | `lb://lead-service` | lead-service |
+| `account-core` | `/account/**` | `lb://account-service` | account-service |
+| `opportunity-core` | `/opportunity/**` | `lb://user-opportunity` | opportunity-service |
+| `company-core` | `/company/**` | `lb://company-service` | company-service |
+| `inventory-core` | `/inventory/**` | `lb://inventory-service` | inventory-service **and** product-service (name clash) |
+| `salesorder-core` | `/salesorder/**` | `lb://salesorder-service` | not registered (503) |
+| `project-core` | `/project/**` | `lb://project-service` | not registered (503) |
+| `task-core` | `/task/**` | `lb://task-service` | no such service (503) |
+| `campaign-core` | `/campaign/**` | `lb://campaign-service` | no such service (503) |
+| `contact-core` | `/contact/**` | `lb://contacts-service` | no such service (503) |
+
+## How a request is handled
+
+`filter/AuthenticationFilter.java`:
+
+1. `RouteValidator.isSecured` decides whether the path is public.
+   * Exact paths: `/auth/signin`, `/auth/signup`, `/eureka`
+   * Prefixes: `/auth/signupcheckEmailId/`, `/eureka/`
+2. Strips client-sent `X-User-*`, `id` and `X-Gateway-Secret` headers.
+3. On a non-public path, requires `Authorization: Bearer <jwt>` and verifies it with `utils/JwtUtil.parseClaims`. If that fails it returns **401** with `WWW-Authenticate: Bearer`, and the request isn't forwarded.
+4. Sets `X-User-Id`, `id`, `X-User-Email`, `X-User-Name`, `X-User-Roles`, `X-User-Privileges` from the token's claims.
+5. Adds `X-Gateway-Secret` and forwards the request.
+
+Full description: [docs/SECURITY.md](../docs/SECURITY.md).
+
+```bash
+# public
+curl -X POST http://localhost:8556/auth/signin -H "Content-Type: application/json" \
+     -d '{"username":"admin@example.com","password":"..."}'   # "username" = email
+# protected
+curl http://localhost:8556/employee/list-employee -H "Authorization: Bearer <token>"
+```
 
 ## Configuration
 
-The service is configured via `application.properties`:
+| Property | Value | Notes |
+|---|---|---|
+| `server.port` | 8556 | |
+| `spring.main.web-application-type` | `reactive` | needed because `spring-boot-starter-web` is also on the classpath |
+| `jwtSecret` | `${JWT_SECRET}` | Base64, must equal authentication-service's |
+| `gateway.secret` | `${GATEWAY_SECRET}` | sent as `X-Gateway-Secret` |
+| `spring.cloud.gateway.discovery.locator.enabled` | `false` | when enabled, it creates `/<service-id>/**` routes **without** the auth filter |
+| `spring.cloud.gateway.default-filters[0]` | `Retry=3` | |
+| `eureka.client.registry-fetch-interval-seconds` | 5 | picks up new instances quickly |
 
-- **Server Port**: 8556
-- **Application Name**: api-gateway-service
-- **Service Discovery**: Connected to Eureka at `http://localhost:8555/eureka`
-- **Web Application Type**: Reactive (WebFlux)
-
-## Routed Services
-
-The gateway routes requests to the following microservices:
-
-| Route ID | Service | Base Path | Protected |
-|----------|---------|-----------|-----------|
-| authendication-core | AUTHENDICATION-SERVICE | `/auth/**` | ❌ |
-| inventory-core | INVENTORY-SERVICE | `/inventory/**` | ✅ |
-| campaign-core | CAMPAIGN-SERVICE | `/campaign/**` | ✅ |
-| employee-core | EMPLOYEE-SERVICE | `/employee/**` | ✅ |
-| opportunity-core | USER-OPPORTUNITY | `/opportunity/**` | ✅ |
-| customer-core | CUSTOMER-SERVICE | `/customer/**` | ✅ |
-| lead-core | LEAD-SERVICE | `/lead/**` | ✅ |
-| account-core | ACCOUNT-SERVICE | `/account/**` | ✅ |
-| contacts-core | CONTACTS-SERVICE | `/contact/**` | ✅ |
-| salesorder-core | SALESORDER-SERVICE | `/salesorder/**` | ✅ |
-| task-core | TASK-SERVICE | `/task/**` | ✅ |
-| project-core | PROJECT-SERVICE | `/project/**` | ✅ |
-| authorization-core | AUTHORIZATION-SERVICE | `/authorization/**` | ✅ |
-| company-core | COMPANY-SERVICE | `/company/**` | ✅ |
-
-## Project Structure
+## Code layout
 
 ```
-gateway-service/
-├── src/
-│   ├── main/
-│   │   ├── java/
-│   │   │   └── com/microservices/apigatewayservice/
-│   │   │       ├── ApiGatewayServiceApplication.java
-│   │   │       ├── config/
-│   │   │       │   ├── AppConfig.java
-│   │   │       │   ├── CorsConfig.java
-│   │   │       │   └── DncResolutionFixer.java
-│   │   │       ├── filter/
-│   │   │       │   ├── AuthenticationFilter.java
-│   │   │       │   └── RouteValidator.java
-│   │   │       └── utils/
-│   │   │           └── JwtUtil.java
-│   │   └── resources/
-│   │       ├── application.properties
-│   │       └── application.yml
-│   └── test/
-├── jenkinsfile
-├── pom.xml
-└── README.md
+com.microservices.apigatewayservice
+├── ApiGatewayServiceApplication.java   @EnableEurekaClient
+├── config/
+│   ├── AppConfig.java
+│   ├── CorsConfig.java                  allowed origins localhost:5173, localhost:3000; GET/POST/PUT/DELETE/OPTIONS
+│   └── DncResolutionFixer.java
+├── filter/
+│   ├── AuthenticationFilter.java        JWT check, header stripping/setting, gateway secret
+│   └── RouteValidator.java              public paths
+└── utils/
+    └── JwtUtil.java                     key from JWT_SECRET, parseClaims / validateToken
 ```
 
-## Key Components
-
-### ApiGatewayServiceApplication
-Main application class with Eureka client discovery enabled.
-
-### AuthenticationFilter
-Custom gateway filter that validates JWT tokens for protected routes. Intercepts all requests matching protected path patterns and verifies token validity.
-
-### RouteValidator
-Utility class to validate and determine if a request route requires authentication.
-
-### CorsConfig
-Configuration for Cross-Origin Resource Sharing to handle requests from different origins.
-
-### DncResolutionFixer
-DNS resolution configuration for proper service discovery.
-
-## Running the Application
-
-### Prerequisites
-
-- Java 17 or higher
-- Maven 3.6+
-- Eureka Server running on `localhost:8555`
-
-### Local Development
-
-1. Clone the repository
-2. Navigate to the `gateway-service` directory
-3. Run the application:
+## Tests
 
 ```bash
-mvn spring-boot:run
+mvn test -Dtest=AuthenticationFilterTest   # 8 unit tests, no infrastructure needed
 ```
 
-Or build and run the JAR:
+They cover missing, non-Bearer, wrong-key and expired tokens, the "path only contains an open endpoint" trick, header spoofing (including `X-Gateway-Secret`), identity propagation, and public endpoints. `ApiGatewayServiceApplicationTests.contextLoads` needs the env vars and Eureka.
 
-```bash
-mvn clean package
-java -jar target/gateway-service-0.0.1-SNAPSHOT.jar
+## Adding a route
+
+Add a block with the next free index and **always** include the filter:
+
+```properties
+spring.cloud.gateway.routes[14].id=<name>-core
+spring.cloud.gateway.routes[14].uri=lb://<spring.application.name>
+spring.cloud.gateway.routes[14].predicates=Path=/<prefix>/**
+spring.cloud.gateway.routes[14].filters=AuthenticationFilter
 ```
 
-The gateway will be available at: `http://localhost:8556`
+To make a new endpoint public, add it to `RouteValidator` and nowhere else.
 
-## Authentication
+## Known issues
 
-Protected routes require a valid JWT token in the Authorization header:
+* 5 routes lead nowhere: salesorder (not registered), project, task, campaign, contact. `/inventory/**` is split between two different apps.
+* CORS: placeholder origin `https://yourdomain.com`, and no `PATCH`.
+* The `jenkinsfile` targets another repository (see [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md#8-ci)).
 
-```bash
-curl -H "Authorization: Bearer <JWT_TOKEN>" http://localhost:8556/inventory/products
-```
-
-### Token Generation
-
-Obtain JWT tokens from the Authentication Service:
-
-```bash
-curl -X POST http://localhost:8556/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username": "user", "password": "password"}'
-```
-
-## API Gateway Endpoints
-
-- **Authentication**: `POST /auth/login` - Generate JWT token
-- **Inventory**: `GET/POST /inventory/**` - Inventory service endpoints
-- **Customers**: `GET/POST /customer/**` - Customer service endpoints
-- **Leads**: `GET/POST /lead/**` - Lead service endpoints
-- **Accounts**: `GET/POST /account/**` - Account service endpoints
-- **Employees**: `GET/POST /employee/**` - Employee service endpoints
-- **Products**: `GET/POST /inventory/**` - Product service endpoints
-- **Opportunities**: `GET/POST /opportunity/**` - Opportunity service endpoints
-- **Sales Orders**: `GET/POST /salesorder/**` - Sales order service endpoints
-- **Tasks**: `GET/POST /task/**` - Task management endpoints
-- **Projects**: `GET/POST /project/**` - Project service endpoints
-- **Authorization**: `GET/POST /authorization/**` - Authorization service endpoints
-- **Company**: `GET/POST /company/**` - Company service endpoints
-
-## Filter Chain
-
-All protected routes pass through the `AuthenticationFilter` which:
-
-1. Extracts the JWT token from the Authorization header
-2. Validates the token using `JwtUtil`
-3. Sets authenticated user information in request context
-4. Forwards request to backend service or returns 401 Unauthorized
-
-## Load Balancing
-
-The gateway uses Spring Cloud LoadBalancer with the `lb://` scheme to distribute requests across multiple instances of backend services registered with Eureka.
-
-## CI/CD
-
-The service includes a Jenkins pipeline for automated building and deployment. The pipeline:
-
-1. Checks out the code from the repository
-2. Builds the application using Maven
-3. Runs the JAR file
-
-## Service Discovery Integration
-
-The gateway automatically discovers all registered services from Eureka. When a microservice registers or deregisters, the gateway updates its routing table dynamically.
-
-## Troubleshooting
-
-### Gateway Not Finding Services
-- Ensure Eureka Server is running on `localhost:8555`
-- Verify backend services are registered with Eureka
-- Check service names match the configuration
-
-### Authentication Failures
-- Verify JWT token is valid and not expired
-- Check token is sent in Authorization header with "Bearer" prefix
-- Ensure secret key matches between gateway and authentication service
-
-### CORS Errors
-- Check `CorsConfig` configuration matches your client domain
-- Verify CORS preflight requests are not being blocked
-
-## Contributing
-
-1. Follow the existing code style and structure
-2. Add tests for new features
-3. Update this README if adding new routes
-4. Create a pull request with a clear description of changes
-
-## License
-
-This project is part of the MySales microservices suite.
-
+See [docs/KNOWN_ISSUES.md](../docs/KNOWN_ISSUES.md).

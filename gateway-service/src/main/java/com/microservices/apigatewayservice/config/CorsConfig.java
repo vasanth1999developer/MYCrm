@@ -18,7 +18,7 @@ public class CorsConfig {
 
 
 		config.setAllowedOrigins(Arrays.asList(
-				"http://localhost:9999",
+				"http://localhost:5173",
 				"http://localhost:3000",
 				"https://yourdomain.com"
 		));

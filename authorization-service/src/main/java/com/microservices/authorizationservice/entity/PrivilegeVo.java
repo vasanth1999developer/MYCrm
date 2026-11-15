@@ -26,7 +26,8 @@ public class PrivilegeVo {
 	
 	@Column(name="privilege_Name")
 	private String privilegeName;
-	
+
+	@Column(name = "is_delete")
 	private boolean isDelete;
 	
 	@ManyToMany

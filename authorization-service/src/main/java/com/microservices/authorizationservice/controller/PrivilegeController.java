@@ -158,4 +158,13 @@ public class PrivilegeController {
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
+    @PostMapping("/privileges")
+    public ResponseEntity<ApiResponse<Set<String>>> getPrivilegesForRoles(
+            @RequestBody Set<String> roleNames) {
+        Set<String> privileges = service.getPrivilegeNamesByRoleNames(roleNames);
+        return ResponseEntity.ok(
+                ApiResponse.success("Privileges fetched", privileges));
+    }
+
+
 }

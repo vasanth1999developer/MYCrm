@@ -2,6 +2,8 @@ package com.microservice.company.bean;
 
 import java.util.Date;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Data;
 
 @Data
@@ -23,6 +25,8 @@ public class CompanyBO {
 		private long createdBy;
 		private long modifiedBy;
 		private String companyWebsite;
+		/** Accepted on create/update, never included in responses. */
+		@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
 		private String password;
 		private String industryType;
 		private String address;
