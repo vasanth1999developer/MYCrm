@@ -71,7 +71,7 @@ Synchronous calls use OpenFeign interfaces in a `SyncCall` package inside each s
 ### Per-service code conventions (newer services: employee, authorization, authentication)
 - Packages: `controller`, `service` (interface + `*ServiceImpl`), `repository` (Spring Data JPA), `entity` (JPA entities, suffix **`Vo`**), `model` (DTOs, suffix **`Bo`**), `common` (`ApiResponse`, exceptions, `GlobalExceptionHandler`), `SyncCall` (Feign clients).
 - Controllers return `ResponseEntity<ApiResponse<T>>` built with `ApiResponse.success(...)` / `ApiResponse.error(...)`. They use Lombok `@RequiredArgsConstructor` constructor injection and `@Valid` request bodies.
-- The base package is `com.microservices.<service>`. The authentication module's package is spelled `authendicationservice`, so keep that spelling.
+- The target base package is `com.clinch.crm.<service>` (the product is called Clinch). authentication-service is migrated (`com.clinch.crm.authentication`); the other modules still use `com.microservices.<service>` until they are renamed. Keep the database schema `ms_mybiz_authendication` as is.
 
 ### Other modules
 - `ai-service`: calls the Claude API (through a `ClaudeClient` WebClient wrapper) to summarize lead activity. The key comes from `ANTHROPIC_API_KEY`. See `ai-service/README.md`.

@@ -117,7 +117,7 @@ Running `mvn test` from the root therefore needs MySQL with the schemas and the 
 
 These are the conventions of the newer services (employee, authorization, authentication). Follow them in new code.
 
-* **Base package** `com.microservices.<service>`. The authentication module keeps the historical spelling `authendicationservice`.
+* **Base package** `com.clinch.crm.<service>` (e.g. `com.clinch.crm.authentication`). Modules not yet migrated still use `com.microservices.<service>`; new code goes under `com.clinch.crm`.
 * **Packages:** `controller`, `service` (interface + `*ServiceImpl`), `repository` (Spring Data JPA), `entity` (JPA entities, suffix **`Vo`**), `model` (DTOs, suffix **`Bo`**), `common` (`ApiResponse`, exceptions, `GlobalExceptionHandler`), `SyncCall` (Feign clients), `gatewayauth` (gateway-secret filter).
 * **Controllers** return `ResponseEntity<ApiResponse<T>>` built with `ApiResponse.success(...)` / `ApiResponse.error(...)`, use Lombok `@RequiredArgsConstructor` constructor injection, and take `@Valid @RequestBody`.
 * **Errors** go through a `@RestControllerAdvice` `GlobalExceptionHandler`. Don't `catch (Exception e) { e.printStackTrace(); }`.
