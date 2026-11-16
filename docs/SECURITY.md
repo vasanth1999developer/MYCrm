@@ -21,7 +21,7 @@ At sign-in, authentication-service calls authorization-service (`POST /authoriza
 
 ## 2. Gateway: `AuthenticationFilter`
 
-`gateway-service/src/main/java/com/microservices/apigatewayservice/filter/AuthenticationFilter.java` is applied to **every route**, including `/auth/**`. For each request it:
+`gateway-service/src/main/java/com/clinch/crm/gateway/filter/AuthenticationFilter.java` is applied to **every route**, including `/auth/**`. For each request it:
 
 1. **Decides whether the path is public** using `RouteValidator`:
    * exact matches: `/auth/signin`, `/auth/signup`, `/eureka`

@@ -13,7 +13,7 @@ The platform's **role-based access control (RBAC) store**. It manages **roles**,
 | Gateway prefix | `/authorization` |
 | Database | MySQL `ms_mybiz_authorization` |
 | Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.8 · Spring Data JPA · Log4j2 (+ Splunk appender) |
-| Base package | `com.microservices.authorizationservice` |
+| Base package | `com.clinch.crm.authorization` |
 | Needs | MySQL schema, env var `GATEWAY_SECRET` |
 
 ## Run
@@ -128,7 +128,7 @@ Data access is meant to be layered as **own data → team data → organisation-
 ## Code layout
 
 ```
-com.microservices.authorizationservice
+com.clinch.crm.authorization
 ├── controller/       RoleController, PrivilegeController, AccessController, AuthorizationController (empty)
 ├── service/          Role/Privilege/AccessService (+Impl)
 ├── repository/       RoleRepository (findActiveByRoleNames, …), PrivilegeRepository, AccessRepository

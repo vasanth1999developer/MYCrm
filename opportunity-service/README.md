@@ -13,7 +13,7 @@ Manages the **sales opportunity pipeline**: potential deals with an amount, sale
 | Gateway prefix | `/opportunity` |
 | Database | MySQL `ms_mybiz_opportunity` |
 | Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.8 · Spring Data JPA · Log4j2 · OpenCSV / Commons CSV · springdoc |
-| Base package | `com.microservice.opportunity` (main class `UserOpportunityApplication`) |
+| Base package | `com.clinch.crm.opportunity` (main class `UserOpportunityApplication`) |
 | Needs | MySQL schema, env var `GATEWAY_SECRET` |
 
 ## Run
@@ -64,7 +64,7 @@ No outgoing calls, even though the pom has a Feign starter. It's called by clien
 ## Code layout
 
 ```
-com.microservice.opportunity
+com.clinch.crm.opportunity
 ├── controller/      OpportunityController
 ├── service/  dao/  repository/
 ├── models/entity/   OpportunityVo
@@ -75,7 +75,7 @@ com.microservice.opportunity
 
 ## Tests
 
-Both test classes are in `com.techymeet.opportunity…`, a package copied from another project, so they fail with "Unable to find a @SpringBootConfiguration". Move them under `com.microservice.opportunity`.
+`UserOpportunityApplicationTests.contextLoads` and `controller/OpportunityTest` both boot the full application (`@SpringBootTest`), so they need `GATEWAY_SECRET` and the MySQL schema. (They used to sit in a package copied from another project and could never start.)
 
 ## Known issues
 

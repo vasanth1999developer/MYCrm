@@ -11,7 +11,7 @@ Manages **employees**, **departments** and **territories**. Creating an employee
 | Gateway prefix | `/employee` |
 | Database | MySQL `ms_mybiz_employee` |
 | Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.8 · OpenFeign · LoadBalancer · Lombok |
-| Base package | `com.microservices.employee` |
+| Base package | `com.clinch.crm.employee` |
 | Needs | MySQL schema, authentication-service + authorization-service (for employee creation), env var `GATEWAY_SECRET` |
 
 ## Run
@@ -93,7 +93,7 @@ Base URL through the gateway: `http://localhost:8556`. All endpoints need a JWT 
 This module follows the platform's reference conventions (see [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md#6-code-conventions)):
 
 ```
-com.microservices.employee
+com.clinch.crm.employee
 ├── controller/   EmployeeController, DepartmentController, TerritoryController
 ├── service/      *Service + *ServiceImpl
 ├── repository/   Spring Data JPA repositories
@@ -111,7 +111,7 @@ mvn test -Dtest=GatewayAuthFilterTest   # 5 unit tests: filter accepts/rejects, 
 mvn test -Dtest=EmployeeBoJsonTest      # password is accepted but never serialized
 ```
 
-`com.microservices.accountservice.AccountServiceApplicationTests` is in a package copied from another module and fails ("Unable to find a @SpringBootConfiguration"). `controller/EmployeeTestController` has no tests.
+`EmployeeServiceApplicationTests.contextLoads` boots the full application, so it needs `GATEWAY_SECRET` and the MySQL schema. `controller/EmployeeTestController` has no tests.
 
 ## Known issues
 

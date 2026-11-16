@@ -108,7 +108,7 @@ The state of the other test classes:
 |---|---|---|
 | Pure unit tests | `AuthenticationFilterTest` (gateway), `GatewayAuthFilterTest` + `EmployeeBoJsonTest` (employee), `UserJsonTest` (authentication), `CompanyPasswordJsonTest` (company), `RoleServiceImplTest` (authorization) | ✅ pass, no infrastructure needed |
 | Full-context controller tests (start Tomcat + JPA) | account `AccountControllerTest`, customer `CustomerTestController`, lead `LeadControllerTest` | ❌ need `GATEWAY_SECRET` set **and** the MySQL schema. They're integration tests, not unit tests. |
-| Mis-packaged tests | opportunity `com.techymeet…OpportunityTest`, product `com.softtwig…ProductControllerTest`, employee `com.microservices.accountservice…` | ❌ fail with "Unable to find a @SpringBootConfiguration" because they sit in packages copied from other projects |
+| Full-context tests formerly in foreign packages | opportunity `OpportunityTest`, product `ProductControllerTest` | ❌ need `GATEWAY_SECRET` and the MySQL schema (product also RabbitMQ). Since the package rename they find the application class; before, they could never start |
 | `*ApplicationTests.contextLoads` | every module | need the module's full infrastructure (DB, secrets, Eureka optional) |
 
 Running `mvn test` from the root therefore needs MySQL with the schemas and the env vars set, or `-DskipTests`.
@@ -117,7 +117,7 @@ Running `mvn test` from the root therefore needs MySQL with the schemas and the 
 
 These are the conventions of the newer services (employee, authorization, authentication). Follow them in new code.
 
-* **Base package** `com.clinch.crm.<service>` (e.g. `com.clinch.crm.authentication`). Modules not yet migrated still use `com.microservices.<service>`; new code goes under `com.clinch.crm`.
+* **Base package** `com.clinch.crm.<service>` (the product is called Clinch), e.g. `com.clinch.crm.authentication`, `com.clinch.crm.employee`. Every module follows it, so does new code.
 * **Packages:** `controller`, `service` (interface + `*ServiceImpl`), `repository` (Spring Data JPA), `entity` (JPA entities, suffix **`Vo`**), `model` (DTOs, suffix **`Bo`**), `common` (`ApiResponse`, exceptions, `GlobalExceptionHandler`), `SyncCall` (Feign clients), `gatewayauth` (gateway-secret filter).
 * **Controllers** return `ResponseEntity<ApiResponse<T>>` built with `ApiResponse.success(...)` / `ApiResponse.error(...)`, use Lombok `@RequiredArgsConstructor` constructor injection, and take `@Valid @RequestBody`.
 * **Errors** go through a `@RestControllerAdvice` `GlobalExceptionHandler`. Don't `catch (Exception e) { e.printStackTrace(); }`.

@@ -13,7 +13,7 @@ A **placeholder** for project tracking. Right now it's an empty Spring Boot 4 ap
 | Gateway prefix | `/project` |
 | Database | none in practice. MySQL `ms_mybiz_project` is configured, but there's no JPA or JDBC dependency. |
 | Stack | **Spring Boot 4.0.3** (`jakarta.*`) · `spring-boot-starter-webmvc` · `spring-boot-starter-restclient` · Lombok |
-| Base package | `com.ms.projectservice` |
+| Base package | `com.clinch.crm.project` |
 | Needs | env var `GATEWAY_SECRET` |
 
 ## Run
@@ -25,7 +25,7 @@ cd project-service && ./mvnw spring-boot:run
 ## What's there
 
 ```
-com.ms.projectservice
+com.clinch.crm.project
 ├── ProjectServiceApplication.java
 └── gatewayauth/GatewayAuthFilter.java   jakarta.servlet variant: 403 without X-Gateway-Secret
 ```

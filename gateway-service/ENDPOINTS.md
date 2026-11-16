@@ -135,7 +135,7 @@ curl -i -X OPTIONS http://localhost:8556/employee/list-employee \
 ## 3. The code: every class and method
 
 ```
-com.microservices.apigatewayservice
+com.clinch.crm.gateway
 ├── ApiGatewayServiceApplication.java
 ├── config/
 │   ├── CorsConfig.java
@@ -159,7 +159,7 @@ public class ApiGatewayServiceApplication {
 
 | Element | What it does |
 |---|---|
-| `@SpringBootApplication` | Auto-configuration + component scan of `com.microservices.apigatewayservice`, which is how `AuthenticationFilter`, `RouteValidator`, `JwtUtil`, `CorsConfig` and `DnsResolutionFixer` get picked up. |
+| `@SpringBootApplication` | Auto-configuration + component scan of `com.clinch.crm.gateway`, which is how `AuthenticationFilter`, `RouteValidator`, `JwtUtil`, `CorsConfig` and `DnsResolutionFixer` get picked up. |
 | `@EnableEurekaClient` | Registers the gateway with Eureka as `api-gateway-service` and keeps a local copy of the registry (refreshed every 5 s). That copy is what resolves `lb://…` URIs. Since Spring Cloud 2020 having the Eureka client on the classpath is already enough; the annotation is kept for clarity. |
 | `main` | Starts Netty on port 8556. `spring.main.web-application-type=reactive` is needed because `spring-boot-starter-web` (Servlet/Tomcat) is also on the classpath, and Spring Cloud Gateway can't run on Servlet. |
 

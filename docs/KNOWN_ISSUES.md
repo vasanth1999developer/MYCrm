@@ -54,8 +54,7 @@ These are open problems found while auditing the codebase (November 2026), group
 | | Issue | Where |
 |---|---|---|
 | 🟠 | Unit-test coverage is thin. There are 6 real unit-test classes, covering the gateway filter, the gateway-secret filter, password serialization and authorization-service's role update. Almost no business logic is tested. | — |
-| 🟠 | The account, customer and lead controller tests boot the whole app, so they need `GATEWAY_SECRET` and a live MySQL schema. | `*/src/test/.../controller/*` |
-| 🟠 | Tests in foreign packages fail with "Unable to find a @SpringBootConfiguration": `com.techymeet.opportunity…` (opportunity), `com.softtwig.product…` (product), `com.microservices.accountservice…` (employee). | those modules' `src/test` |
+| 🟠 | The account, customer, lead, opportunity and product controller tests boot the whole app, so they need `GATEWAY_SECRET` and a live MySQL schema. | `*/src/test/.../controller/*` |
 
 ## Data and behaviour
 

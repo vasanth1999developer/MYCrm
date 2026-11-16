@@ -11,7 +11,7 @@ Manages **customers**: people or organisations that bought a product, including 
 | Gateway prefix | `/customer` (all endpoints are under `/customer/v1/…`) |
 | Database | MySQL `ms_mybiz_customer` |
 | Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.1 · Spring Data JPA (+ Data JDBC) · springdoc |
-| Base package | `com.microservices` (main class `CustomerApplication`); code under `com.microservices.customer` |
+| Base package | `com.clinch.crm.customer` (main class `CustomerApplication`) |
 | Needs | MySQL schema, env var `GATEWAY_SECRET` |
 
 ## Run
@@ -47,7 +47,7 @@ Through the gateway at `http://localhost:8556`. Every endpoint needs a JWT. Resp
 
 ## Calls and callers
 
-No outgoing calls. It's called by clients through the gateway. Incoming requests need `X-Gateway-Secret` (`com.microservices.gatewayauth.GatewayAuthFilter`).
+No outgoing calls. It's called by clients through the gateway. Incoming requests need `X-Gateway-Secret` (`com.clinch.crm.customer.gatewayauth.GatewayAuthFilter`).
 
 ## Configuration
 
@@ -62,15 +62,14 @@ No outgoing calls. It's called by clients through the gateway. Incoming requests
 ## Code layout
 
 ```
-com.microservices
+com.clinch.crm.customer
 ├── CustomerApplication.java
-├── gatewayauth/GatewayAuthFilter.java
-└── customer/
-    ├── controller/  CustomerController
-    ├── service/     CustomerService(+Impl)
-    ├── dao/         repository
-    ├── entity/      CustomerVo
-    └── model/       CustomerBo
+├── gatewayauth/  GatewayAuthFilter
+├── controller/   CustomerController
+├── service/      CustomerService(+Impl)
+├── dao/          repository
+├── entity/       CustomerVo
+└── model/        CustomerBo
 ```
 
 ## Tests

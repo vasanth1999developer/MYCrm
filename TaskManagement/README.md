@@ -13,7 +13,7 @@ A simple **task tracker**: tasks with a title, description, status and due date.
 | Gateway prefix | `/task` (route target `task-service` doesn't exist) |
 | Database | PostgreSQL `localhost:5432/taskdb`, `postgres` / `admin` |
 | Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.8 (BOM only) · Spring Data JPA · Validation · springdoc · `spring-boot-starter-amqp` (unused) |
-| Base package | `com.fynxt.taskmanagement` |
+| Base package | `com.clinch.crm.task` |
 | Needs | PostgreSQL with database `taskdb` |
 
 ## Run
@@ -58,7 +58,7 @@ A task isn't linked to an employee, project or customer yet.
 ## Code layout
 
 ```
-com.fynxt.taskmanagement
+com.clinch.crm.task
 ├── controller/            TaskController
 ├── service/  repository/
 ├── VO/                    TaskVo
@@ -66,7 +66,7 @@ com.fynxt.taskmanagement
 └── CustomGlobalException/ GlobalExceptionHandler
 ```
 
-The package and folder naming (`com.fynxt`, upper-case `VO`/`BO`) differ from the rest of the platform.
+The folder naming (upper-case `VO`/`BO`, `CustomGlobalException`) differs from the rest of the platform.
 
 ## Tests
 
@@ -77,5 +77,5 @@ The package and folder naming (`com.fynxt`, upper-case `VO`/`BO`) differ from th
 1. Add `spring-cloud-starter-netflix-eureka-client` and `eureka.client.serviceUrl.defaultZone=http://localhost:8555/eureka`.
 2. Set `spring.application.name=task-service` (to match the existing route), or change the route to the new name.
 3. Move to a free port (e.g. 8571).
-4. Copy `GatewayAuthFilter` into `com.fynxt.taskmanagement.gatewayauth` and add `gateway.secret=${GATEWAY_SECRET}`.
+4. Copy `GatewayAuthFilter` into `com.clinch.crm.task.gatewayauth` and add `gateway.secret=${GATEWAY_SECRET}`.
 5. Remove the unused AMQP starter, or use it.

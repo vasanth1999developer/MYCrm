@@ -11,7 +11,7 @@ Manages **sales leads**: prospects that haven't become customers yet. It covers 
 | Gateway prefix | `/lead` |
 | Database | MySQL `ms_mybiz_lead` |
 | Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.8 · Spring Data JPA · Log4j2 · OpenCSV / Commons CSV · springdoc |
-| Base package | `com.microservice.leadservice` |
+| Base package | `com.clinch.crm.lead` |
 | Needs | MySQL schema, env var `GATEWAY_SECRET` |
 
 ## Run
@@ -64,7 +64,7 @@ No outgoing calls. It's called by clients through the gateway, and requests need
 ## Code layout
 
 ```
-com.microservice.leadservice
+com.clinch.crm.lead
 ├── controllers/     LeadController
 ├── services/        lead service
 ├── repository/
@@ -76,7 +76,7 @@ com.microservice.leadservice
 
 ## Tests
 
-`controllers/LeadControllerTest` (5 tests) boots the full application, so it needs `GATEWAY_SECRET` and the MySQL schema. `com.microservice.lead.LeadServiceApplicationTests` is in a different package (`lead` vs `leadservice`).
+`controllers/LeadControllerTest` (5 tests) boots the full application, so it needs `GATEWAY_SECRET` and the MySQL schema. `LeadServiceApplicationTests.contextLoads` also boots the full application.
 
 ## Known issues
 

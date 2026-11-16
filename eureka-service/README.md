@@ -12,7 +12,7 @@ For a detailed, learning-oriented walkthrough of every REST endpoint (register, 
 | Dashboard | http://localhost:8555 |
 | Registry API | `GET http://localhost:8555/eureka/apps` |
 | Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.1 · `spring-cloud-starter-netflix-eureka-server` |
-| Base package | `com.microservices.eurekaservice` (one class, `EurekaServiceApplication`, `@EnableEurekaServer`) |
+| Base package | `com.clinch.crm.eureka` (one class, `EurekaServiceApplication`, `@EnableEurekaServer`) |
 | Needs | nothing. No database, no secrets. |
 
 ## Run

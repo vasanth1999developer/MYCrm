@@ -38,7 +38,7 @@ Key ideas:
 
 The module has exactly **one** class.
 
-### `EurekaServiceApplication` (`src/main/java/com/microservices/eurekaservice/EurekaServiceApplication.java`)
+### `EurekaServiceApplication` (`src/main/java/com/clinch/crm/eureka/EurekaServiceApplication.java`)
 
 ```java
 @EnableEurekaServer
@@ -53,7 +53,7 @@ public class EurekaServiceApplication {
 
 | Element | What it does |
 |---|---|
-| `@SpringBootApplication` | Standard Spring Boot entry point: turns on auto-configuration, component scanning of `com.microservices.eurekaservice`, and lets the class hold `@Bean`s. |
+| `@SpringBootApplication` | Standard Spring Boot entry point: turns on auto-configuration, component scanning of `com.clinch.crm.eureka`, and lets the class hold `@Bean`s. |
 | `@EnableEurekaServer` | The important one. It adds a marker bean that activates `EurekaServerAutoConfiguration`, which creates the in-memory registry (`PeerAwareInstanceRegistry`), the Jersey REST API under `/eureka/*`, the HTML dashboard (`EurekaController` at `/`), and the eviction timer. Remove it and the app starts as a plain web app with none of the endpoints below. |
 | `main(String[] args)` | Boots the embedded Tomcat on port 8555 and starts the registry. `SpringApplication.run` blocks only until startup is done, so `"Eureka Server"` is printed once the app is up. (A logger would be better than `System.out`, but it's harmless.) |
 

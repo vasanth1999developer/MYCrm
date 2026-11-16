@@ -11,7 +11,7 @@ Manages **company (tenant) profiles**: name, GST number, contact person, contact
 | Gateway prefix | `/company` |
 | Database | MySQL `ms_mybiz_company` |
 | Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.1 · Spring Data JPA · springdoc · Jersey Apache client |
-| Base package | `com.microservice.company` |
+| Base package | `com.clinch.crm.company` |
 | Needs | MySQL schema, env var `GATEWAY_SECRET` |
 
 ## Run
@@ -56,7 +56,7 @@ No outgoing calls. It's called by clients through the gateway, and requests need
 ## Code layout
 
 ```
-com.microservice.company
+com.clinch.crm.company
 ├── controller/   CompanyController
 ├── service/  repository/
 ├── entity/       CompanyVO

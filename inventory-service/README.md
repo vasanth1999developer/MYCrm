@@ -13,7 +13,7 @@ The **inventory back office**. It manages product types, products (with min/max/
 | Gateway prefix | `/inventory` |
 | Database | MySQL `ms_mybiz_inventory` |
 | Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.8 · Spring Data JPA · Log4j2 · OpenCSV / Commons CSV · springdoc |
-| Base package | `com.microservice.inventory` |
+| Base package | `com.clinch.crm.inventory` |
 | Needs | MySQL schema, env var `GATEWAY_SECRET` |
 
 ## Run
@@ -127,7 +127,7 @@ No outgoing calls. It's called by clients through the gateway, and requests need
 ## Code layout
 
 ```
-com.microservice.inventory
+com.clinch.crm.inventory
 ├── controller/   InventoryController (all 41 endpoints)
 ├── service/  repository/
 ├── entity/       ProductTypeVo, ProductVo, PriceBookVO, SupplierVO, PurchaseOrderVO

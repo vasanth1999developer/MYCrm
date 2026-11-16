@@ -12,7 +12,7 @@ For a detailed, learning-oriented walkthrough of every route, gateway response, 
 | Eureka name | `api-gateway-service` |
 | Database | none |
 | Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.2 · Spring Cloud Gateway · jjwt 0.11.5 |
-| Base package | `com.microservices.apigatewayservice` |
+| Base package | `com.clinch.crm.gateway` |
 | Needs | `eureka-service` running; env vars `JWT_SECRET`, `GATEWAY_SECRET` |
 
 ## Run
@@ -82,7 +82,7 @@ curl http://localhost:8556/employee/list-employee -H "Authorization: Bearer <tok
 ## Code layout
 
 ```
-com.microservices.apigatewayservice
+com.clinch.crm.gateway
 ├── ApiGatewayServiceApplication.java   @EnableEurekaClient
 ├── config/
 │   ├── CorsConfig.java                  allowed origins localhost:5173, localhost:3000; GET/POST/PUT/DELETE/OPTIONS
