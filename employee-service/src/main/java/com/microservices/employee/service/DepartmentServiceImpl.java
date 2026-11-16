@@ -10,12 +10,22 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Default {@link DepartmentService}. Maps fields by hand (no {@code BeanUtils}).
+ */
 @Service
 @RequiredArgsConstructor
 public class DepartmentServiceImpl implements DepartmentService {
 
+    /** Department table access (constructor-injected by Lombok). */
     private final DepartmentRepository departmentRepository;
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The duplicate check also counts soft-deleted departments. Two simultaneous requests with
+     * the same name can both pass it; the database's unique constraint then rejects the second.
+     */
     @Override
     public DepartmentBo createDepartment(DepartmentBo bo) {
         if (departmentRepository.existsByDepartmentNameIgnoreCase(bo.getDepartmentName())) {
@@ -32,6 +42,7 @@ public class DepartmentServiceImpl implements DepartmentService {
         return bo;
     }
 
+    /** {@inheritDoc} */
     @Override
     public List<DepartmentBo> listDepartments() {
         return departmentRepository.findByIsDeletedFalse().stream()

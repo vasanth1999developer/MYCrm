@@ -26,6 +26,11 @@ import org.springframework.test.web.servlet.ResultActions;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microservices.employee.model.EmployeeBo;
 
+/**
+ * Empty placeholder for MockMvc tests of {@link EmployeeController}; it has no test methods, so
+ * JUnit runs nothing here. The imports show the intended style: boot the app on a random port and
+ * call the endpoints with {@link MockMvc}.
+ */
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc

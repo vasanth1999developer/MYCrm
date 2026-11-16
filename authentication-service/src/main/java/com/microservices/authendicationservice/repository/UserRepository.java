@@ -7,12 +7,37 @@ import org.springframework.stereotype.Repository;
 
 import com.microservices.authendicationservice.models.User;
 
+/**
+ * Spring Data repository for {@link User}.
+ *
+ * <p>Spring generates the implementation at startup. Besides the inherited CRUD methods
+ * ({@code save}, {@code findById}…), the methods below are <i>derived queries</i>: Spring builds
+ * the SQL from the method name.
+ */
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
+	/**
+	 * Used at sign-in to load the user by login key.
+	 *
+	 * @param email the email
+	 * @return the user, or empty if none has this email
+	 */
 	Optional<User> findByEmail(String email);
 
+	/**
+	 * Currently unused.
+	 *
+	 * @param username the username
+	 * @return {@code true} if a user has this username
+	 */
 	Boolean existsByUsername(String username);
 
+	/**
+	 * Used by {@code POST /auth/users} and {@code GET /auth/signupcheckEmailId/{email}}.
+	 *
+	 * @param email the email
+	 * @return {@code true} if a user has this email
+	 */
 	Boolean existsByEmail(String email);
 
 //	@Modifying

@@ -102,7 +102,7 @@ Databases are created on first start (`ddl-auto=update`) as long as the MySQL sc
 curl -X POST http://localhost:8556/auth/signin \
   -H "Content-Type: application/json" \
   -d '{"username":"admin@example.com","password":"<password>"}'   # "username" must be the user's EMAIL
-# → { "success": true, "data": { "token": "eyJ…", "type": "Bearer", "id": 1, "roles": [...] } }
+# → { "success": true, "data": { "accessToken": "eyJ…", "tokenType": "Bearer", "id": 1, "roles": [...], ... } }
 
 curl http://localhost:8556/employee/list-employee -H "Authorization: Bearer eyJ…"
 ```

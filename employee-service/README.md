@@ -22,12 +22,12 @@ mvn spring-boot:run
 
 ## API
 
-Base URL through the gateway: `http://localhost:8556`. All endpoints need a JWT and return `ApiResponse<T>`.
+Base URL through the gateway: `http://localhost:8556`. All endpoints need a JWT and return `ApiResponse<T>` on success. There's no exception handler, so department/territory validation errors (400) and duplicate names (**500**, not 409) use Spring Boot's default error JSON. Every class and method has Javadoc with the exact responses.
 
 | Method | Path | Body | Notes |
 |---|---|---|---|
 | `POST` | `/employee/create-employee` | `EmployeeBo` (below) | creates the login user and the employee (see flow) |
-| `GET` | `/employee/list-employee` | — | non-deleted employees |
+| `GET` | `/employee/list-employee` | — | non-deleted employees; answers **201** "Employee is Created" |
 | `POST` | `/employee/department/create` | `DepartmentBo {departmentName}` | validated (`@Valid`) |
 | `GET` | `/employee/department/list` | — | |
 | `POST` | `/employee/territory/create` | `TerritoryBo {territoryName}` | validated (`@Valid`) |
@@ -48,7 +48,7 @@ Base URL through the gateway: `http://localhost:8556`. All endpoints need a JWT 
 }
 ```
 
-`username` and `password` are **write-only** (`@JsonProperty(access = WRITE_ONLY)`). They're accepted in the request but never included in responses. `managerId` may be null for top-level employees. `department` and `territory` are stored as **names (strings)**, not foreign keys.
+`username`, `password`, `role` and `managerId` are **write-only** (`@JsonProperty(access = WRITE_ONLY)`). They're accepted in the request but never included in responses. `EmployeeBo` also has no `employeeId`, so neither the create nor the list response tells you an employee's id, role or manager. `managerId` may be null for top-level employees. `department` and `territory` are stored as **names (strings)**, not foreign keys.
 
 ### Employee creation flow
 
@@ -58,7 +58,7 @@ Base URL through the gateway: `http://localhost:8556`. All endpoints need a JWT 
 2. `AuthClient.createUser({username, email, password, roles:[role]})` → `POST /auth/users`. Returns the new **user id**.
 3. Saves `EmployeeVo` with `employeeId = user id`, so the employee and the login share one id.
 
-⚠️ If step 3 fails, the exception is swallowed and the login user from step 2 stays behind. There's no compensation (see Known issues).
+⚠️ If step 3 fails, the login user from step 2 stays behind; there's no compensation (see Known issues). Exceptions inside `save()` are swallowed, so the client sees success. Because `employeeId` is assigned (not generated), `save()` merges and the INSERT runs at commit, so a duplicate email in the `employee` table surfaces after the try/catch and gives the "Employee creation failed" response.
 
 ## Data model
 
@@ -118,6 +118,9 @@ mvn test -Dtest=EmployeeBoJsonTest      # password is accepted but never seriali
 * 🟠 `create-employee` lacks `@Valid`, so the password-strength and other rules on `EmployeeBo` don't run.
 * 🟠 There's no compensation when the employee save fails after the login user was created. The error is also swallowed, so the client sees success.
 * 🟠 Every creation failure is reported as HTTP 201 + `success:false` with a generic message.
+* 🟠 Responses never include the employee id, role or manager.
+* 🟠 Duplicate department/territory names give 500 (no exception handler).
+* 🟡 `list-employee` answers 201 for a read.
 * 🟡 Only create and list exist. There's no update, get-by-id or delete.
 
 See [docs/KNOWN_ISSUES.md](../docs/KNOWN_ISSUES.md).

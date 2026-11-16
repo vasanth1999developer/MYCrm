@@ -25,18 +25,30 @@ import com.microservices.authorizationservice.repository.PrivilegeRepository;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 
+/**
+ * Default {@link PrivilegeService}, converting between {@link PrivilegeBo} (API) and
+ * {@link PrivilegeVo} (database).
+ *
+ * <p>As in {@link RoleServiceImpl}, {@link BeanUtils#copyProperties} skips the
+ * {@code accesses} sets (different element types), so they are converted by hand. Most methods
+ * catch all exceptions and return {@code false}/{@code null}.
+ */
 @Slf4j
 @Service
 public class PrivilegeServiceImpl implements PrivilegeService {
+	/** Used by {@link #getPrivilegeNamesByRoleNames}. */
 	@Autowired
 	RoleRepository roleRepository;
 
+	/** Privilege table access. */
 	@Autowired
 	public PrivilegeRepository repository;
 
+	/** Used to load the real access rows when creating a privilege. */
 	@Autowired
 	AccessRepository accessRepository;
 
+	/** {@inheritDoc} */
 	@Override
 	public boolean checkDuplicateName(String privilegeName) {
 		boolean status = false;
@@ -51,6 +63,13 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 		return status;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>Each access is loaded from the database by id, so the request only needs {@code accessId}.
+	 * On success the saved id and name are copied back into the given {@code privilegeBo}, which is
+	 * returned.
+	 */
 	@Override
 	public PrivilegeBo createPrivilege(PrivilegeBo privilegeBo) {
 		try {
@@ -83,6 +102,13 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 		return null;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>If {@code sortOrder} is given but {@code searchText} is {@code null}, the
+	 * {@code searchText.isEmpty()} call throws a {@code NullPointerException}, which is caught, and
+	 * the method returns {@code null}.
+	 */
 	@Override
 	public Page<PrivilegeBo> listAllPrivileges(int pageIndex, int pageSize, String sortOrder, String searchText) {
 		Page<PrivilegeVo> privilegeVo = null;
@@ -124,6 +150,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 		return null;
 	}
 
+	/** {@inheritDoc} Soft-deleted privileges are returned too. */
 	@Override
 	public PrivilegeBo findIdByPrivilege(int privilegeId) {
 
@@ -151,6 +178,12 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 		return null;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The accesses are rebuilt from the request (id and name each); the name is needed because
+	 * the set is sorted by it. A missing privilege causes a caught {@code NullPointerException}.
+	 */
 	@Override
 	public boolean updatePrivilege(PrivilegeBo privilegeBo) {
 		PrivilegeVo privilegeVo = new PrivilegeVo();
@@ -176,6 +209,13 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 		return false;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>A missing privilege causes a caught {@code NullPointerException} ({@code false}). The
+	 * privilege stays linked to its roles and keeps being granted at sign-in (see
+	 * {@link #getPrivilegeNamesByRoleNames}).
+	 */
 	@Override
 	public boolean deletePrivilege(int privilegeId) {
 		PrivilegeVo privilegeVo = null;
@@ -192,6 +232,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 		return false;
 	}
 
+	/** {@inheritDoc} */
 	@Override
 	public Set<PrivilegeBo> listAllPrivileges() {
 
@@ -217,6 +258,17 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 
 
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>One query loads the active, non-deleted roles with their privileges
+	 * ({@link RoleRepository#findActiveByRoleNames}), then the privilege names are flattened into
+	 * a {@link TreeSet} (sorted, no duplicates). Read-only transaction, so the lazy privilege
+	 * collections can be read.
+	 *
+	 * <p>Privileges are <b>not</b> filtered on their own {@code isDelete} flag, so a soft-deleted
+	 * privilege is still granted. Each call logs at INFO what was asked and found.
+	 */
 	@Override
 	@Transactional(readOnly = true)
 	public Set<String> getPrivilegeNamesByRoleNames(Set<String> roleNames) {

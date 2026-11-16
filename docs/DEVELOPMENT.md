@@ -106,7 +106,7 @@ The state of the other test classes:
 
 | Kind | Where | Status |
 |---|---|---|
-| Pure unit tests | `AuthenticationFilterTest` (gateway), `GatewayAuthFilterTest` + `EmployeeBoJsonTest` (employee), `UserJsonTest` (authentication), `CompanyPasswordJsonTest` (company) | ✅ pass, no infrastructure needed |
+| Pure unit tests | `AuthenticationFilterTest` (gateway), `GatewayAuthFilterTest` + `EmployeeBoJsonTest` (employee), `UserJsonTest` (authentication), `CompanyPasswordJsonTest` (company), `RoleServiceImplTest` (authorization) | ✅ pass, no infrastructure needed |
 | Full-context controller tests (start Tomcat + JPA) | account `AccountControllerTest`, customer `CustomerTestController`, lead `LeadControllerTest` | ❌ need `GATEWAY_SECRET` set **and** the MySQL schema. They're integration tests, not unit tests. |
 | Mis-packaged tests | opportunity `com.techymeet…OpportunityTest`, product `com.softtwig…ProductControllerTest`, employee `com.microservices.accountservice…` | ❌ fail with "Unable to find a @SpringBootConfiguration" because they sit in packages copied from other projects |
 | `*ApplicationTests.contextLoads` | every module | need the module's full infrastructure (DB, secrets, Eureka optional) |

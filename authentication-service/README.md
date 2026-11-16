@@ -28,7 +28,7 @@ Base URL through the gateway: `http://localhost:8556`. Responses use the `ApiRes
 
 | Method | Path | Auth | Body / params | Returns |
 |---|---|---|---|---|
-| `POST` | `/auth/signin` | **public** | `{"username": "<email>", "password": "…"}` | `JwtResponse`: `token`, `type` = `Bearer`, `id`, `username`, `email`, `roles`, `isActive` |
+| `POST` | `/auth/signin` | **public** | `{"username": "<email>", "password": "…"}` | `JwtResponse` (JSON keys follow the getters): `accessToken`, `tokenType` = `Bearer`, `id`, `username`, `email`, `roles`, `active` |
 | `GET` | `/auth/signupcheckEmailId/{email}` | **public** | — | `data: true` if the email is already registered |
 | `POST` | `/auth/users` | JWT (intended admin-only, not enforced) | `{"username","email","password","role": ["ROLE_NAME"]}` | `201`, `data:` new user id. `400` if the email exists or no role was given |
 | `GET` | `/auth/get-loggedInUserById/{userId}` | JWT | — | the `User` entity: `id`, `username`, `email`, `isDelete`, `roles` (the password hash is excluded by `@JsonIgnore`) |

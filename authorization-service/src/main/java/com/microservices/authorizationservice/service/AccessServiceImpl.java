@@ -20,14 +20,22 @@ import com.microservices.authorizationservice.repository.AccessRepository;
 
 import java.util.List;
 
+/**
+ * Default {@link AccessService}.
+ *
+ * <p>Newer than the role/privilege services: create, update and list throw exceptions that
+ * {@code GlobalExceptionHandler} turns into HTTP errors, instead of returning {@code false}.
+ */
 @Service
 public class AccessServiceImpl implements AccessService {
 
 
+	/** Access table access. */
 	@Autowired
 	AccessRepository accessRepository;
 
 
+	/** {@inheritDoc} */
 	@Override
 	public boolean isDuplicateAccess(String accessName) {
 
@@ -41,6 +49,7 @@ public class AccessServiceImpl implements AccessService {
 		return false;
 	}
 
+	/** {@inheritDoc} */
 	@Override
 	public AccessVo createAccess(AccessBo accessBo) {
 
@@ -58,6 +67,7 @@ public class AccessServiceImpl implements AccessService {
 		return accessRepository.save(accessVo);
 	}
 
+	/** {@inheritDoc} Soft-deleted entries are returned too. */
 	@Override
 	public AccessBo getAccessByAccessId(int accessId) {
 		AccessBo accessBo = null;
@@ -77,6 +87,13 @@ public class AccessServiceImpl implements AccessService {
 
 
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>Instead of "skip N rows" ({@code OFFSET}), it asks for "rows with id greater than
+	 * {@code lastId}", which stays fast on big tables. A blank {@code searchText} is treated as no
+	 * filter. {@code nextCursor} is the last id of this page, or {@code null} when there are no more.
+	 */
 	@Override
 	public CursorResponse<AccessBo> listAccesses(Integer lastId, int size, String searchText) {
 
@@ -127,10 +144,20 @@ public class AccessServiceImpl implements AccessService {
 		);
 	}
 
+	/** Fields {@link #getAccess} may sort by; protects against sorting on arbitrary properties. */
 	private static final List<String> ALLOWED_SORT_FIELDS =
 			List.of("accessId", "accessName");
 
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>Clamps {@code page} to 0 or more and {@code size} to 1-100. The filters are built from
+	 * {@link AccessSpecification} ("not deleted" AND optional "name contains").
+	 *
+	 * <p>An unknown {@code sortBy} is replaced with {@code "id"}, which isn't a property of
+	 * {@link AccessVo}, so the query fails and the client gets 500.
+	 */
 	@Override
 	public PaginatedResponse<AccessBo> getAccess(int page, int size, String searchText, String sortBy, String direction) {
 
@@ -171,6 +198,11 @@ public class AccessServiceImpl implements AccessService {
 	}
 
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>Only {@code accessName} is changed; the name isn't checked for duplicates.
+	 */
 	@Override
 	public boolean updateAccess(AccessBo accessBo) {
 		if (accessBo == null || accessBo.getAccessId() <= 0) {
@@ -186,6 +218,12 @@ public class AccessServiceImpl implements AccessService {
 		return true;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>A missing entry causes a caught {@code NullPointerException} ({@code false}). Privileges
+	 * that link to the entry keep the link.
+	 */
 	@Override
 	public boolean deleteAccess(int accessId) {
 		boolean softDeletionStatus = false;
@@ -204,11 +242,12 @@ public class AccessServiceImpl implements AccessService {
 		return softDeletionStatus;
 	}
 
+	/** {@inheritDoc} */
 	@Override
 	public Set<AccessBo> listAllAccesses() {
-	
+
 		Set<AccessBo> setBo = null ;
-		
+
 		try {
 			Set<AccessVo> setVo = accessRepository.findAllByIsDeleted(false);
 			if((setVo !=null) &&(!setVo.isEmpty())) {
@@ -222,9 +261,9 @@ public class AccessServiceImpl implements AccessService {
 		} catch ( Exception e ) {
 			e.printStackTrace();
 		}
-		
+
 		return setBo;
-	
+
 	}
 
 }

@@ -17,16 +17,35 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 
+/**
+ * Creates (and, in legacy methods, validates) the JWTs the whole platform uses.
+ *
+ * <p>Tokens are signed with HS256 using {@code JWT_SECRET}. The gateway verifies them with the same
+ * secret, so both services must have the same value. Only {@link #generateToken} is used today;
+ * the other public methods are leftovers from an earlier design.
+ */
 @Component
 public class JwtUtils {
 	private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
 
+	/** Base64 HMAC secret from {@code JWT_SECRET} (at least 32 bytes once decoded). */
 	@Value("${jwtSecret}")
 	private String jwtSecret;
 
+	/** Token lifetime in milliseconds ({@code jwtExpirationMs}, 900000 = 15 min). */
 	@Value("${jwtExpirationMs}")
 	private int jwtExpirationMs;
 
+	/**
+	 * Legacy, unused: builds a token from a Spring {@link Authentication}.
+	 *
+	 * <p>Not compatible with the gateway: {@code userId} is a String, there's no {@code privileges}
+	 * claim, and {@code roles} contains authority objects ({@code [{"authority":"..."}]}) instead
+	 * of plain names. {@code setId} is called twice; the random UUID wins.
+	 *
+	 * @param authentication a successful authentication whose principal is a {@link UserDetailsImpl}
+	 * @return the compact signed JWT
+	 */
 	public String generateJwtToken(Authentication authentication) {
 
 		UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
@@ -53,6 +72,21 @@ public class JwtUtils {
 
 	}
 
+	/**
+	 * Builds the signed access token returned by {@code POST /auth/signin}.
+	 *
+	 * <p>Standard claims: {@code sub} (user id), {@code iss} ("mycrm-auth"), {@code jti} (random
+	 * UUID, unique per token), {@code iat}, {@code exp} (now + {@link #jwtExpirationMs}).
+	 * Custom claims, which the gateway copies into {@code X-User-*} headers: {@code userId}
+	 * (number), {@code email}, {@code username}, {@code roles} and {@code privileges} (JSON arrays).
+	 *
+	 * @param userId     the user's database id
+	 * @param email      the user's email (login key)
+	 * @param username   the display/login name
+	 * @param roles      role names, e.g. {@code [SALES_REP]}
+	 * @param privileges privilege names granted by those roles
+	 * @return the compact JWT ({@code header.payload.signature})
+	 */
 	public String generateToken(Long userId, String email, String username,
 								Set<String> roles, Set<String> privileges) {
 
@@ -73,10 +107,27 @@ public class JwtUtils {
 				.compact();
 	}
 
+	/**
+	 * Legacy, unused: verifies a token and returns its {@code sub} claim.
+	 *
+	 * <p>With tokens from {@link #generateToken} the subject is the user <b>id</b>, not the
+	 * username, despite this method's name.
+	 *
+	 * @param token the compact JWT
+	 * @return the subject claim
+	 * @throws JwtException if the token is invalid or expired
+	 */
 	public String getUserNameFromJwtToken(String token) {
 		return Jwts.parserBuilder().setSigningKey(getSignKey()).build().parseClaimsJws(token).getBody().getSubject();
 	}
 
+	/**
+	 * Legacy, unused: checks signature and expiry, logging the specific reason on failure.
+	 * Token verification for requests happens in the gateway, not here.
+	 *
+	 * @param authToken the compact JWT
+	 * @return {@code true} if valid, {@code false} otherwise
+	 */
 	public boolean validateJwtToken(String authToken) {
 		try {
 			 Jwts.parserBuilder().setSigningKey(getSignKey()).build().parseClaimsJws(authToken);
@@ -95,7 +146,14 @@ public class JwtUtils {
 
 		return false;
 	}
-	
+
+	/**
+	 * Decodes {@link #jwtSecret} from Base64 and builds the HMAC-SHA key. Called on every sign or
+	 * verify (the key isn't cached).
+	 *
+	 * @return the signing key
+	 * @throws io.jsonwebtoken.security.WeakKeyException if the key is shorter than 256 bits
+	 */
 	 private Key getSignKey() {
 	        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
 	        return Keys.hmacShaKeyFor(keyBytes);

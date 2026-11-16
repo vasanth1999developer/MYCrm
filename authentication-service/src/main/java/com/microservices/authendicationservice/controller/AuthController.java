@@ -36,24 +36,42 @@ import com.microservices.authendicationservice.response.JwtResponse;
 import com.microservices.authendicationservice.response.MessageResponse;
 import com.microservices.authendicationservice.services.UserDetailsImpl;
 
+/**
+ * REST endpoints for login users, under the gateway prefix {@code /auth}.
+ *
+ * <p>Clients reach these through the gateway ({@code /auth/**} route). Which ones need a JWT is
+ * decided by the gateway's {@code RouteValidator}: {@code /auth/signin} and
+ * {@code /auth/signupcheckEmailId/*} are public, everything else needs a token. This service
+ * itself doesn't check JWTs; it only checks {@code X-Gateway-Secret} (see
+ * {@link com.microservices.authendicationservice.gatewayauth.GatewayAuthFilter}).
+ *
+ * <p>All responses use the {@link ApiResponse} envelope.
+ */
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
+
+	/** Unused here since sign-in moved to {@link AuthService}; kept for the commented-out legacy code. */
 	@Autowired
 	AuthenticationManager authenticationManager;
 
+	/** Reads and saves {@link User} rows. */
 	@Autowired
 	UserRepository userRepository;
 
+	/** Unused: roles are stored as plain strings on {@link User}, not as {@link Role} rows. */
 	@Autowired
 	RoleRepository roleRepository;
 
+	/** BCrypt encoder (strength 12) used to hash new users' passwords. */
 	@Autowired
 	PasswordEncoder encoder;
 
+	/** Unused here; token creation happens in {@link AuthService}. */
 	@Autowired
 	JwtUtils jwtUtils;
 
+	/** Performs sign-in: password check, privilege lookup, token creation. */
 	@Autowired
 	AuthService authService;
 
@@ -100,6 +118,27 @@ public class AuthController {
 
 
 
+	/**
+	 * {@code POST /auth/signin} (public): logs a user in and returns a JWT.
+	 *
+	 * <p>Request body: {@code {"username": "<email>", "password": "..."}}. Despite its name,
+	 * {@code username} must be the user's <b>email</b>, because that is the login key (see
+	 * {@link com.microservices.authendicationservice.services.UserDetailsServiceImpl}).
+	 *
+	 * <p>Responses:
+	 * <ul>
+	 *   <li>200: {@code data} is a {@link JwtResponse} with {@code accessToken}, {@code tokenType}
+	 *       ("Bearer"), {@code id}, {@code username}, {@code email}, {@code roles}, {@code active}.</li>
+	 *   <li>400: a field is blank ({@code @Valid}).</li>
+	 *   <li>401: unknown email or wrong password ({@code BadCredentialsException}, turned into 401 by
+	 *       Spring Security and {@link com.microservices.authendicationservice.jwt.AuthEntryPointJwt}).</li>
+	 *   <li>500: the account is deactivated, or authorization-service is unreachable or returned no
+	 *       privileges. There is no exception handler yet to map these to 403/503.</li>
+	 * </ul>
+	 *
+	 * @param loginRequest email and password
+	 * @return the token and basic user info, wrapped in {@link ApiResponse}
+	 */
 	@PostMapping("/signin")
 	public ResponseEntity<ApiResponse<JwtResponse>> authenticateUser(
 			@Valid @RequestBody LoginRequestDto loginRequest) {
@@ -112,6 +151,22 @@ public class AuthController {
 
 
 
+	/**
+	 * {@code POST /auth/users} (JWT required at the gateway): creates a login user.
+	 *
+	 * <p>Called mainly by employee-service (through Feign, directly via Eureka, with
+	 * {@code X-Gateway-Secret}) when an employee is created. The comment says "admin-only", but no
+	 * role check is enforced: any authenticated caller can create users.
+	 *
+	 * <p>The password is hashed with BCrypt before saving. Role names are stored as given; they are
+	 * not checked against authorization-service here (employee-service validates them first).
+	 *
+	 * <p>Responses: 201 with the new user id in {@code data}; 400 if the email already exists, no
+	 * role was given, or a field fails validation.
+	 *
+	 * @param request username (3-20 chars), email, password (6-40 chars) and role names
+	 * @return the id of the created user
+	 */
 	@PostMapping("/users")   // admin-only
 	public ResponseEntity<ApiResponse<Long>> createUser(@Valid @RequestBody SignupRequestDto request) {
 
@@ -140,6 +195,18 @@ public class AuthController {
 
 
 
+	/**
+	 * {@code GET /auth/signupcheckEmailId/{email}} (public): tells whether an email is already registered.
+	 *
+	 * <p>{@code data} is {@code true} if the email is taken. Note the oddities: it answers
+	 * <b>201</b> with the message "User is created", although nothing is created, and the
+	 * {@code user} parameter is unused (Spring fills it from query parameters, if any).
+	 *
+	 * @param email the email to check
+	 * @param user  unused
+	 * @return {@code true} if a user with this email exists, {@code false} otherwise
+	 * @throws Exception declared but never thrown by this code
+	 */
 	@GetMapping("/signupcheckEmailId/{email}")
 	public ResponseEntity<?> checkEmailId(@PathVariable("email") String email, User user) throws Exception {
 
@@ -153,6 +220,17 @@ public class AuthController {
     }
 
 
+	/**
+	 * {@code GET /auth/get-loggedInUserById/{userId}} (JWT required at the gateway): returns one user.
+	 *
+	 * <p>{@code data} is the {@link User} entity ({@code id}, {@code username}, {@code email},
+	 * {@code isDelete}, {@code roles}); the password hash is excluded by {@code @JsonIgnore}.
+	 * There's no check that {@code userId} is the caller's own id, so any signed-in user can read
+	 * any user.
+	 *
+	 * @param userId the user's id
+	 * @return 200 with the user, or 404 "User not found"
+	 */
 	@GetMapping("/get-loggedInUserById/{userId}")
 	public ResponseEntity<?> getloggedInUserById(@PathVariable long userId) {
 

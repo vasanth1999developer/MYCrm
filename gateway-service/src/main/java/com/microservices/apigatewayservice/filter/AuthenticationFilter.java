@@ -24,37 +24,83 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import reactor.core.publisher.Mono;
 
+/**
+ * Route filter that authenticates every request passing through the gateway.
+ *
+ * <p>Attached to each route with {@code spring.cloud.gateway.routes[N].filters=AuthenticationFilter}.
+ * Spring Cloud Gateway names a filter factory after its class (minus any
+ * {@code GatewayFilterFactory} suffix), which is how that property finds this bean.
+ *
+ * <p>For every request it:
+ * <ol>
+ *   <li>asks {@link RouteValidator} whether the path is public;</li>
+ *   <li>removes client-sent {@code X-User-*}, {@code id} and {@code X-Gateway-Secret} headers, so
+ *       nobody can fake an identity or the secret;</li>
+ *   <li>on a secured path, requires {@code Authorization: Bearer <jwt>} and verifies it with
+ *       {@link JwtUtil#parseClaims}; any failure ends the request with 401 and it is not forwarded;</li>
+ *   <li>sets the trusted identity headers from the token's claims;</li>
+ *   <li>adds {@code X-Gateway-Secret}, which each downstream {@code GatewayAuthFilter} requires,
+ *       and forwards the request.</li>
+ * </ol>
+ *
+ * <p>Downstream services must read the caller's identity only from these headers.
+ */
 @Component
 public class AuthenticationFilter extends AbstractGatewayFilterFactory<AuthenticationFilter.Config> {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthenticationFilter.class);
+
+    /** Expected start of the Authorization header value (note the trailing space). */
     private static final String BEARER_PREFIX = "Bearer ";
 
     /** Identity headers set by the gateway from the verified JWT. Never trusted from clients. */
     public static final String USER_HEADER_PREFIX = "X-User-";
+    /** The caller's user id, from the {@code userId} claim. */
     public static final String HEADER_USER_ID = "X-User-Id";
+    /** The caller's email, from the {@code email} claim. */
     public static final String HEADER_USER_EMAIL = "X-User-Email";
+    /** The caller's login name, from the {@code username} claim. */
     public static final String HEADER_USER_NAME = "X-User-Name";
+    /** The caller's roles, comma-separated, from the {@code roles} claim. */
     public static final String HEADER_USER_ROLES = "X-User-Roles";
+    /** The caller's privileges, comma-separated, from the {@code privileges} claim. */
     public static final String HEADER_USER_PRIVILEGES = "X-User-Privileges";
     /** Legacy header older services read as the caller's user id (e.g. createdBy). */
     public static final String LEGACY_ID_HEADER = "id";
     /** Proves to downstream services (their GatewayAuthFilter) that the request passed this filter. */
     public static final String GATEWAY_SECRET_HEADER = "X-Gateway-Secret";
 
+    /** Shared secret from {@code GATEWAY_SECRET}; must equal {@code gateway.secret} in every service. */
     @Value("${gateway.secret}")
     private String gatewaySecret;
 
+    /** Decides which paths are public. */
     @Autowired
     private RouteValidator validator;
 
+    /** Verifies the token and extracts its claims. */
     @Autowired
     private JwtUtil jwtUtil;
 
+    /**
+     * Tells the parent factory which class holds this filter's per-route arguments
+     * (none here, see {@link Config}).
+     */
     public AuthenticationFilter() {
         super(Config.class);
     }
 
+    /**
+     * Builds the filter instance for one route. Called once per route at startup; the returned
+     * lambda then runs for every request on that route.
+     *
+     * <p>Inside the lambda, {@code chain.filter(...)} passes the (modified) request on towards the
+     * downstream service, while returning {@link #unauthorized} instead stops it with 401. WebFlux
+     * requests are immutable, so changes are made on copies via {@code mutate()}.
+     *
+     * @param config per-route options (unused, the class is empty)
+     * @return a filter that authenticates the request and rewrites its headers
+     */
     @Override
     public GatewayFilter apply(Config config) {
         return ((exchange, chain) -> {
@@ -89,6 +135,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                 return unauthorized(exchange, "token has no userId claim");
             }
 
+            // set() replaces any existing value, so each header ends up with exactly one value.
             ServerHttpRequest request = stripIdentityHeaders(exchange.getRequest()).mutate()
                     .headers(h -> {
                         h.set(HEADER_USER_ID, userId);
@@ -105,7 +152,17 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
         });
     }
 
-    /** Removes any client-supplied X-User-* and legacy "id" headers. */
+    /**
+     * Removes any client-supplied X-User-* and legacy "id" headers.
+     *
+     * <p>Also removes {@code X-Gateway-Secret}, so a client can't send its own guess; the real value
+     * is added afterwards. The prefix check ignores case, so {@code x-user-privileges} is caught
+     * too. Names are collected first and removed after the loop, because removing while iterating
+     * {@code keySet()} would throw {@code ConcurrentModificationException}.
+     *
+     * @param request the incoming request
+     * @return a copy of the request without those headers
+     */
     private ServerHttpRequest stripIdentityHeaders(ServerHttpRequest request) {
         String prefix = USER_HEADER_PREFIX.toLowerCase(Locale.ROOT);
         return request.mutate()
@@ -123,7 +180,15 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                 .build();
     }
 
-    /** Scalars become their string form; collections (roles, privileges) become comma-separated. */
+    /**
+     * Scalars become their string form; collections (roles, privileges) become comma-separated.
+     *
+     * <p>Examples: {@code null} → {@code ""}; {@code 42L} → {@code "42"};
+     * {@code ["LEAD_READ","LEAD_WRITE"]} → {@code "LEAD_READ,LEAD_WRITE"}.
+     *
+     * @param value a claim value from the token, possibly {@code null} if the claim is missing
+     * @return a header-safe string, never {@code null}
+     */
     private static String claimAsString(Object value) {
         if (value == null) {
             return "";
@@ -134,6 +199,17 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
         return String.valueOf(value);
     }
 
+    /**
+     * Ends the request with 401 Unauthorized without forwarding it.
+     *
+     * <p>Sets {@code WWW-Authenticate: Bearer} (the standard hint that a Bearer token is needed)
+     * and an empty body. The reason is only logged, not sent to the client, so a caller doesn't
+     * learn why their token failed.
+     *
+     * @param exchange the current request/response pair
+     * @param reason   why the request was rejected, for the WARN log
+     * @return a {@link Mono} that completes when the response has been sent
+     */
     private Mono<Void> unauthorized(ServerWebExchange exchange, String reason) {
         logger.warn("Rejecting {} {}: {}", exchange.getRequest().getMethod(),
                 exchange.getRequest().getURI().getPath(), reason);
@@ -143,6 +219,10 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
         return response.setComplete();
     }
 
+    /**
+     * Per-route configuration for this filter. Empty, because the filter takes no arguments.
+     * Fields added here could be set per route, e.g. {@code filters=AuthenticationFilter=...}.
+     */
     public static class Config {
 
     }

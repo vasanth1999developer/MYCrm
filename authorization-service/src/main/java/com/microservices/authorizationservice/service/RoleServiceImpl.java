@@ -18,15 +18,27 @@ import com.microservices.authorizationservice.model.PrivilegeBo;
 import com.microservices.authorizationservice.model.RoleBo;
 import com.microservices.authorizationservice.repository.RoleRepository;
 
+/**
+ * Default {@link RoleService}, converting between {@link RoleBo} (API) and {@link RoleVo} (database).
+ *
+ * <p>{@link BeanUtils#copyProperties} copies same-named properties between the two. It skips
+ * properties whose types don't match, such as {@code Set<PrivilegeBo>} vs {@code Set<PrivilegeVo>},
+ * which is why privileges are converted by hand in each method.
+ *
+ * <p>Every method catches all exceptions, prints the stack trace and returns {@code false}/{@code null}.
+ */
 @Service
 public class RoleServiceImpl implements RoleService {
 
+	/** Role table access. */
 	@Autowired
 	RoleRepository roleRepository;
 
+	/** Used to load the real privilege rows when creating a role. */
 	@Autowired
 	public PrivilegeRepository privilegeRepository;
 
+	/** {@inheritDoc} */
 	@Override
 	public boolean isDuplicateRole(String roleName) {
 		boolean isDuplicate = false;
@@ -41,6 +53,13 @@ public class RoleServiceImpl implements RoleService {
 		return isDuplicate;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>Each privilege is loaded from the database by id, so the request only needs
+	 * {@code privilegeId}. The new role is always active, whatever the request says. A role
+	 * without privileges is never saved.
+	 */
 	@Override
 	public boolean createRole(RoleBo roleBo) {
 		boolean creationStatus = false;
@@ -75,6 +94,11 @@ public class RoleServiceImpl implements RoleService {
 		return creationStatus;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>Returns soft-deleted roles too. Privileges come back without their accesses.
+	 */
 	@Override
 	public RoleBo getRoleByRoleId(int roleId) {
 		RoleBo roleBo = null;
@@ -100,6 +124,12 @@ public class RoleServiceImpl implements RoleService {
 		return roleBo;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>Uses a "contains" query when {@code searchText} is given, otherwise all non-deleted roles.
+	 * The database page is converted item by item into a new {@link PageImpl} with the same totals.
+	 */
 	@Override
 	public Page<RoleBo> listRoles(int pageIndex, int pageSize, String sortOrder, String searchText) {
 		Page<RoleBo> pageBo = null;
@@ -139,6 +169,15 @@ public class RoleServiceImpl implements RoleService {
 		return pageBo;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>Only the name and the privileges come from the request. The active and deleted flags are
+	 * kept as stored: use {@code switch-activity} or {@code delete} to change them. (Copying the
+	 * whole request with {@code BeanUtils} used to overwrite {@code active} with {@code false}
+	 * whenever the client didn't send {@code "active": true}.) The privileges are rebuilt from the
+	 * request (id and name each); the name is needed because the set is sorted by it.
+	 */
 	@Override
 	public boolean updateRole(RoleBo roleBo) {
 		boolean updationStatus = false;
@@ -147,7 +186,8 @@ public class RoleServiceImpl implements RoleService {
 				Set<PrivilegeBo> setBo = roleBo.getPrivileges();
 				Set<PrivilegeVo> setVo =  new TreeSet<>(Comparator.comparing(PrivilegeVo::getPrivilegeName));
 				RoleVo roleVo = roleRepository.findById(roleBo.getRoleId()).orElse(null);
-				BeanUtils.copyProperties(roleBo, roleVo);
+				// Only the name: copying the whole Bo would reset isActive to false when the client omits "active".
+				roleVo.setRoleName(roleBo.getRoleName());
 				if ((setBo != null) && (!setBo.isEmpty())) {
 					for (PrivilegeBo privilegeBo : setBo) {
 						PrivilegeVo privilegeVo = new PrivilegeVo();
@@ -167,6 +207,11 @@ public class RoleServiceImpl implements RoleService {
 		return updationStatus;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>A missing role causes a {@code NullPointerException}, which is caught and reported as {@code false}.
+	 */
 	@Override
 	public boolean deleteRole(int roleId) {
 		boolean softDeletionStatus = false;
@@ -185,6 +230,11 @@ public class RoleServiceImpl implements RoleService {
 		return softDeletionStatus;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>A missing role causes a {@code NullPointerException}, which is caught and reported as {@code false}.
+	 */
 	@Override
 	public boolean switchActivity(int roleId) {
 		boolean switchActivityStatus = false;

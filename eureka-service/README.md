@@ -2,6 +2,8 @@
 
 The **service registry** (Netflix Eureka server). Every service registers under its `spring.application.name`, and the gateway and Feign clients resolve `lb://<name>` addresses through it. Start it **first**. For background on why the platform uses service discovery, see [Purpose.md](Purpose.md).
 
+For a detailed, learning-oriented walkthrough of every REST endpoint (register, heartbeat, registry queries, status overrides…) with real requests and responses, see [ENDPOINTS.md](ENDPOINTS.md).
+
 ## At a glance
 
 | | |

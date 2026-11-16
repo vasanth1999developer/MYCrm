@@ -2,6 +2,8 @@
 
 The **single entry point** for all client traffic. It's a Spring Cloud Gateway (reactive / WebFlux) that routes each path prefix to a service found through Eureka. It also **authenticates every request with a JWT**, sets trusted identity headers, and attaches the shared gateway secret that downstream services require.
 
+For a detailed, learning-oriented walkthrough of every route, gateway response, class and method, see [ENDPOINTS.md](ENDPOINTS.md).
+
 ## At a glance
 
 | | |
@@ -83,9 +85,8 @@ curl http://localhost:8556/employee/list-employee -H "Authorization: Bearer <tok
 com.microservices.apigatewayservice
 ├── ApiGatewayServiceApplication.java   @EnableEurekaClient
 ├── config/
-│   ├── AppConfig.java
 │   ├── CorsConfig.java                  allowed origins localhost:5173, localhost:3000; GET/POST/PUT/DELETE/OPTIONS
-│   └── DncResolutionFixer.java
+│   └── DnsResolutionFixer.java          Netty uses the OS DNS resolver for downstream calls
 ├── filter/
 │   ├── AuthenticationFilter.java        JWT check, header stripping/setting, gateway secret
 │   └── RouteValidator.java              public paths

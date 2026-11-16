@@ -19,14 +19,31 @@ import org.springframework.transaction.annotation.Transactional;
 import com.microservices.employee.model.EmployeeBo;
 import com.microservices.employee.repository.EmployeeRepository;
 
+/**
+ * Default {@link EmployeeService}: the platform's main example of a call across services.
+ *
+ * <p>{@code @Transactional} on the class wraps each method in a database transaction, but only
+ * for <b>this</b> service's database: the login user created in authentication-service is not
+ * part of it and is never rolled back.
+ */
 @Service
 @Transactional
 public class EmployeeServiceImpl implements EmployeeService {
+	/** Feign client for authorization-service (role check). */
 	private final AuthorizationClient authorizationClient;   // Feign → authorization-service
+	/** Feign client for authentication-service (login user creation). */
 	private final AuthClient authClient;
+	/** Employee table access. Also set by the constructor; {@code @Autowired} on the field is redundant. */
 	@Autowired
 	private EmployeeRepository employeeRepository;
 
+	/**
+	 * Constructor injection of the dependencies.
+	 *
+	 * @param authorizationClient Feign client for authorization-service
+	 * @param authClient          Feign client for authentication-service
+	 * @param employeeRepository  employee table access
+	 */
 	public EmployeeServiceImpl(AuthorizationClient authorizationClient,
 							   AuthClient authClient,
 							   EmployeeRepository employeeRepository) {
@@ -35,6 +52,26 @@ public class EmployeeServiceImpl implements EmployeeService {
 		this.employeeRepository = employeeRepository;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <ol>
+	 *   <li><b>Check the role</b> with authorization-service ({@code GET /authorization/role/exists}).
+	 *       Done first because it's cheap and creates nothing. Note that check also accepts
+	 *       inactive and deleted roles.</li>
+	 *   <li><b>Create the login user</b> in authentication-service ({@code POST /auth/users}) with
+	 *       username, email, password and the single role. Its response is the new user id.</li>
+	 *   <li><b>Save the employee</b> with {@code employeeId} = that user id, so the employee and
+	 *       the login share one id (the {@code userId} in the JWT).</li>
+	 * </ol>
+	 *
+	 * <p>Step 3 has no compensation: whatever goes wrong, the login user from step 2 stays.
+	 * Exceptions thrown inside {@code save()} are <b>swallowed</b> (only printed) and the client
+	 * sees success. Because the id is assigned rather than generated, {@code save()} does a merge
+	 * and the actual INSERT runs at commit, after this method; constraint violations found then
+	 * (e.g. the email already exists in this table) propagate to the controller, which answers
+	 * "Employee creation failed". Steps 1 and 2 throw normally.
+	 */
 	@Override
 	public EmployeeBo createEmployee(EmployeeBo employee) {
 
@@ -72,6 +109,12 @@ public class EmployeeServiceImpl implements EmployeeService {
 		return employee;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>Copies each {@link EmployeeVo} into an {@link EmployeeBo} with {@link BeanUtils}; fields the
+	 * Bo doesn't have (id, active flag, timestamps) are dropped.
+	 */
 	@Override
 	public List<EmployeeBo> getAllEmployees() {
 

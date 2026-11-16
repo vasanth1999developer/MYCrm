@@ -17,6 +17,16 @@ import javax.validation.Valid;
 import javax.validation.constraints.Min;
 import java.util.Set;
 
+/**
+ * REST endpoints for <b>access entries</b>, under {@code /authorization/access} (JWT required at
+ * the gateway).
+ *
+ * <p>An access entry (e.g. "view leads") is the smallest unit in the RBAC model:
+ * role → privileges → accesses. All responses use the {@link ApiResponse} envelope.
+ *
+ * <p>{@code @Validated} on the class enables constraints on path/query parameters such as
+ * {@code @Min}; violations become 400 through {@code GlobalExceptionHandler}.
+ */
 @Validated
 @CrossOrigin(origins = "*")
 @RestController
@@ -25,13 +35,25 @@ import java.util.Set;
 public class AccessController {
 
 
+    /** Access business logic, injected through the constructor. */
     private final AccessService accessService;
 
+    /** @param accessService access business logic */
     public AccessController(AccessService accessService) {
         this.accessService = accessService;
     }
 
 
+    /**
+     * {@code POST /authorization/access/create}: creates an access entry.
+     *
+     * <p>Body: {@code {"accessName": "VIEW_LEADS"}}. The response's {@code data} is the saved
+     * <b>entity</b>, so its keys are {@code accessId}, {@code accessName} and {@code deleted}.
+     *
+     * @param accessBo the access to create; {@code accessName} must not be empty
+     * @return 201 with the saved entry; 400 if the name is empty; 409 if a non-deleted entry with
+     *         this name exists
+     */
     @PostMapping("/create")
     public ResponseEntity<ApiResponse<AccessVo>> createAccess(
             @Valid @RequestBody AccessBo accessBo) {
@@ -42,6 +64,13 @@ public class AccessController {
                 .body( ApiResponse.success( "Access created successfully", savedAccess));
     }
 
+    /**
+     * {@code GET /authorization/access/get-access/{accessId}}: one access entry (soft-deleted ones too).
+     *
+     * @param accessId the id, at least 1
+     * @return 200 with the entry; also <b>200</b> ({@code success: true}, no data,
+     *         "pls Enter Proper Access Id") if it doesn't exist; 400 for an id below 1
+     */
     @GetMapping("/get-access/{accessId}")
     public ResponseEntity<?> getAccess(
             @PathVariable @Min(value = 1, message = "Access id should be greater than zero") int accessId) {
@@ -59,6 +88,21 @@ public class AccessController {
     }
 
 
+    /**
+     * {@code GET /authorization/access/list?page=0&size=10&searchText=&sortBy=accessId&direction=asc}:
+     * one page of access entries that aren't soft-deleted.
+     *
+     * <p>{@code data} is a {@link PaginatedResponse}: {@code data}, {@code currentPage},
+     * {@code totalPages}, {@code totalItems}, {@code first}, {@code last}, {@code hasNext},
+     * {@code hasPrevious}.
+     *
+     * @param page       zero-based page number (negative becomes 0)
+     * @param size       items per page; must be above 0, capped at 50
+     * @param searchText optional case-insensitive "name contains" filter
+     * @param sortBy     {@code accessId} or {@code accessName}; any other value currently causes 500
+     * @param direction  {@code desc} for descending, anything else ascending
+     * @return 200 with the page; 400 if {@code size} is 0 or less
+     */
     @GetMapping("/list")
     public ResponseEntity<ApiResponse<PaginatedResponse<AccessBo>>> listAccesses(
             @RequestParam(defaultValue = "0") int page,
@@ -82,6 +126,17 @@ public class AccessController {
         );
     }
 
+    /**
+     * {@code PUT /authorization/access/update}: renames an access entry.
+     *
+     * <p>Body: {@code {"accessId": 1, "accessName": "..."}}. Validation errors are collected in
+     * {@code bindingResult} but not checked, so an empty name is saved as is.
+     *
+     * @param access        the id and the new name
+     * @param bindingResult validation result (currently ignored)
+     * @return 200 "Access is updated Successfully"; 400 for an id of 0 or less; 500 if the id
+     *         doesn't exist ({@code ResourceNotFoundException} has no dedicated handler)
+     */
     @PutMapping("/update")
     public ResponseEntity<ApiResponse<?>> updateAccess(@Validated @RequestBody AccessBo access, BindingResult bindingResult) {
 
@@ -99,6 +154,12 @@ public class AccessController {
         }
     }
 
+    /**
+     * {@code DELETE /authorization/access/delete/{accessId}}: soft delete (sets {@code isDeleted}).
+     *
+     * @param accessId the id, must be greater than 0
+     * @return 200 "Access is Deleted"; 400 for an id of 0 or less; 500 if it doesn't exist
+     */
     @DeleteMapping("delete/{accessId}")
     public ResponseEntity<?> deleteAccess(@PathVariable("accessId") int accessId) {
         try {
@@ -117,6 +178,13 @@ public class AccessController {
 
     }
 
+    /**
+     * {@code GET /authorization/access/list-all}: every access entry that isn't soft-deleted,
+     * sorted by name, without paging.
+     *
+     * @return 200 with the set; <b>500</b> when there are none at all (the service returns
+     *         {@code null} for an empty table)
+     */
     @GetMapping("list-all")
     public ResponseEntity<?> getAllAccesses() {
         try {

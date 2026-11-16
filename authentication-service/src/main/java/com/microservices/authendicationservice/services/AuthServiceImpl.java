@@ -21,18 +21,42 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Default {@link AuthService}: the sign-in flow.
+ *
+ * <ol>
+ *   <li>Spring Security checks email and password ({@link AuthenticationManager} →
+ *       {@link UserDetailsServiceImpl} loads the user → BCrypt compares the password).</li>
+ *   <li>Deactivated accounts ({@code isDelete = true}) are rejected.</li>
+ *   <li>The user's privileges are fetched from authorization-service for their roles.</li>
+ *   <li>A JWT with id, email, username, roles and privileges is signed by {@link JwtUtils}.</li>
+ * </ol>
+ *
+ * <p>Dependencies are injected through the Lombok-generated constructor
+ * ({@code @RequiredArgsConstructor} on the {@code final} fields).
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
+    /** Spring Security's entry point for checking credentials. */
     private final AuthenticationManager authenticationManager;
 
 
+    /** Feign client for authorization-service, used to resolve privileges. */
     private final AuthorizationClient authorizationClient;
 
+    /** Signs the JWT. */
     private final JwtUtils jwtUtils;
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The deactivation check runs <b>after</b> the password check, so a deactivated user with a
+     * wrong password gets 401 like anyone else, and only the correct password reveals that the
+     * account is deactivated.
+     */
     @Override
     public JwtResponse signIn(LoginRequestDto loginRequest) {
 
@@ -63,6 +87,18 @@ public class AuthServiceImpl implements AuthService {
                 userDetails.getUsername(), userDetails.getEmail(), roles);
     }
 
+    /**
+     * Asks authorization-service which privileges the given roles grant.
+     *
+     * <p>Fails closed: if the call fails for any reason, or returns no privileges, sign-in fails
+     * rather than issuing a token without privileges.
+     *
+     * @param roles role names of the user, e.g. {@code [SALES_REP]}
+     * @param email the user's email, only for log messages
+     * @return the union of privileges for those roles, never empty
+     * @throws AuthorizationUnavailableException if authorization-service is unreachable, errors,
+     *         or returns an empty/null set
+     */
     private Set<String> fetchPrivileges(Set<String> roles, String email) {
         try {
             Set<String> privileges =

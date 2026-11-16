@@ -19,7 +19,7 @@ The platform's **role-based access control (RBAC) store**. It manages **roles**,
 ## Run
 
 ```bash
-mvn spring-boot:run
+mvn spring-boot:run      # system Maven: this module's mvnw is broken (no .mvn/wrapper)
 ```
 
 Start it **before** authentication-service, because sign-in fails if it can't be reached.
@@ -40,21 +40,23 @@ Deletes are **soft deletes** (flags). `PATCH /role/switch-activity/{id}` toggles
 
 ## API
 
-All paths are reached through the gateway at `http://localhost:8556` and need a JWT. Responses use the `ApiResponse` envelope. Validation and not-found errors are mapped by `common/GlobalExceptionHandler` (`DuplicateResourceException`, `ResourceNotFoundException`).
+All paths are reached through the gateway at `http://localhost:8556` and need a JWT. Access and most privilege endpoints use the `ApiResponse` envelope; role endpoints (except `/exists`) and the privilege `list`/`list-all`/`update`/`delete` endpoints return raw bodies (`true`, a string, an object or a Spring `Page`). `common/GlobalExceptionHandler` maps validation errors and `IllegalArgumentException` to 400 and `DuplicateResourceException` to 409; everything else, including `ResourceNotFoundException`, becomes 500. Every class and method has Javadoc describing exact responses and quirks.
+
+> Lombok boolean fields appear in JSON **without** the `is` prefix: `RoleBo.isActive` → `active`, `AccessVo.isDeleted` → `deleted`, `PaginatedResponse.isFirst`/`isLast` → `first`/`last`.
 
 ### Roles: `/authorization/role`
 
 | Method | Path | Body / params | Notes |
 |---|---|---|---|
-| `GET` | `/check-duplicate` | `?roleName=` | `true` if the name is taken |
-| `POST` | `/create` | `RoleBo {roleName, isActive, privileges:[PrivilegeBo]}` | |
-| `GET` | `/view/{roleId}` | — | |
+| `GET` | `/check-duplicate` | `?roleName=` | `409 true` if the name is taken, `200 false` if free |
+| `POST` | `/create` | `RoleBo {roleName, privileges:[{privilegeId}]}` | always created active; needs ≥ 1 privilege, else 500 |
+| `GET` | `/view/{roleId}` | — | includes soft-deleted roles |
 | `GET` | `/list/{pageIndex}/{pageSize}` | `?sortOrder=&searchText=` | paginated |
-| `PUT` | `/update` | `RoleBo` (with `roleId`) | |
+| `PUT` | `/update` | `RoleBo {roleId, roleName, privileges:[{privilegeId, privilegeName}]}` | replaces name and privileges; keeps the active/deleted flags (`active` in the body is ignored) |
 | `PATCH` | `/switch-activity/{roleId}` | — | toggles active (⚠️ the gateway's CORS config doesn't allow PATCH from browsers) |
 | `DELETE` | `/delete/{roleId}` | — | soft delete |
 | `POST` | `/bulk` | `[RoleBo]` | bulk create |
-| `GET` | `/exists` | `?roleName=` | used by employee-service |
+| `GET` | `/exists` | `?roleName=` | used by employee-service; also matches inactive/deleted roles |
 
 ### Privileges: `/authorization/privilege`
 
@@ -62,10 +64,10 @@ All paths are reached through the gateway at `http://localhost:8556` and need a 
 |---|---|---|---|
 | `GET` | `/check-duplicate` | `?privilegeName=` | |
 | `POST` | `/create` | `PrivilegeBo {privilegeName, accesses:[AccessBo]}` | |
-| `GET` | `/list/{pageIndex}/{pageSize}` | `?sortOrder=&searchText=` | |
-| `GET` | `/view/{privilegeId}` | — | |
-| `PUT` | `/update` | `PrivilegeBo` | |
-| `DELETE` | `/delete/{privilegeId}` | — | soft delete |
+| `GET` | `/list/{pageIndex}/{pageSize}` | `?sortOrder=&searchText=` | ⚠️ pass both params; otherwise often 204 |
+| `GET` | `/view/{privilegeId}` | — | ⚠️ broken: inverted id check, always 400/404 |
+| `PUT` | `/update` | `PrivilegeBo {privilegeId, accesses:[{accessId, accessName}]}` | replaces accesses only; 200 `false` on failure |
+| `DELETE` | `/delete/{privilegeId}` | — | soft delete; ⚠️ still granted at sign-in |
 | `GET` | `/list-all` | — | |
 | `POST` | `/bulk` | `[PrivilegeBo]` | |
 | `POST` | `/privileges` | `["ROLE_A","ROLE_B"]` | **used at sign-in**: returns the set of privilege names granted by the *active* roles given |
@@ -140,11 +142,18 @@ com.microservices.authorizationservice
 
 ## Tests
 
-Only `AuthorizationServiceApplicationTests.contextLoads`. The manual test matrix for `/access/list` is in [list test.md](list%20test.md).
+```bash
+# this module's mvnw is broken; use system Maven or another module's wrapper with -f
+mvn test -Dtest=RoleServiceImplTest   # 4 unit tests (mocked repository): update keeps the active flag, applies name/privileges, missing role
+```
+
+`AuthorizationServiceApplicationTests.contextLoads` boots the full app (MySQL + `GATEWAY_SECRET`). The manual test matrix for `/access/list` is in [list test.md](list%20test.md).
 
 ## Known issues
 
 * 🔴 Privileges aren't enforced anywhere.
+* 🔴 Soft-deleted privileges are still put into JWTs; `GET /privilege/view/{id}` never works.
+* 🟠 Inconsistent "not found" handling (500 / 204 / 200 `false`), and `access/list` gives 500 for an unknown `sortBy`.
 * 🟡 Dead Feign client `SyncCall/AuthorizationClient`.
 * 🟡 Actuator exposes everything (`*`).
 
