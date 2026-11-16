@@ -53,13 +53,13 @@ The gateway also routes `/campaign/**` → `campaign-service` and `/contact/**` 
 | Layer | Technology |
 |---|---|
 | Language | Java 17 (all modules compile with `release=17`) |
-| Framework | Spring Boot **2.7.15** for everything under `mycrm-parent`; `ai-service` is Boot 3.3.0; `project-service` and `urlshortner` are Boot 4.0.3 |
+| Framework | Spring Boot **2.7.15** for everything under `clinch-parent`; `ai-service` is Boot 3.3.0; `project-service` and `urlshortner` are Boot 4.0.3 |
 | Cloud | Spring Cloud 2021.0.x — Netflix Eureka, Spring Cloud Gateway, OpenFeign, LoadBalancer |
 | Security | JWT (jjwt 0.11.5, HS256), Spring Security (authentication-service only), shared gateway secret |
 | Persistence | Spring Data JPA / Hibernate (`ddl-auto=update`); **MySQL** for most services, **PostgreSQL** for TaskManagement |
 | Messaging | RabbitMQ (product-service listener only) |
 | API docs | springdoc-openapi 1.7 (Swagger UI at `/swagger-url.html` on services that include it) |
-| Build | Maven, one root aggregator POM (`mycrm-parent`) |
+| Build | Maven, one root aggregator POM (`clinch-parent`) |
 
 > There is no Redis in the codebase, and PostgreSQL is used only by TaskManagement — earlier versions of this README said otherwise.
 
@@ -115,7 +115,7 @@ Always call services **through the gateway (`:8556`)**. Calling a service's own 
 
 ```
 MyCrm/
-├── pom.xml                  # mycrm-parent: aggregator + Spring Boot 2.7.15 parent + java.version=17
+├── pom.xml                  # clinch-parent: aggregator + Spring Boot 2.7.15 parent + java.version=17
 ├── docs/                    # project-level documentation
 ├── eureka-service/          # infrastructure
 ├── gateway-service/

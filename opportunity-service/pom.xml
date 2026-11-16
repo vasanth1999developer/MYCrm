@@ -4,18 +4,18 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>com.mycrm</groupId>
-		<artifactId>mycrm-parent</artifactId>
+		<groupId>com.clinch</groupId>
+		<artifactId>clinch-parent</artifactId>
 		<version>1.0.0</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
-	<groupId>com.mysalesms</groupId>
+	<groupId>com.clinch</groupId>
 
 
 	<artifactId>opportunity-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>opportunity-service</name>
-	<description>mysalesms application oppurtunity</description>
+	<description>Clinch CRM: sales opportunities</description>
 	<properties>
 		<java.version>17</java.version>
 		<spring-cloud.version>2021.0.8</spring-cloud.version>

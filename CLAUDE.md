@@ -34,9 +34,9 @@ The only real unit tests are `AuthenticationFilterTest` (gateway-service), `Gate
 
 ## Build gotchas
 
-- **Java 17 is set in one place.** The root `pom.xml` (`mycrm-parent`) inherits `spring-boot-starter-parent:2.7.15`, which turns `java.version=17` into `release=17` and supplies the plugin versions (JUnit 5-capable Surefire 2.22.2). **Don't add `<source>`/`<target>` to a module's `maven-compiler-plugin`**, because that overrides the parent. IntelliJ's "Set language level" quick-fix does exactly that, so decline it and reload the Maven project instead.
-- **Mixed Spring Boot generations.** `mycrm-parent` pins **Spring Boot 2.7.15**. Most services inherit it, so they use `javax.*` (for example `javax.validation`), not `jakarta.*`, and Spring Cloud `2021.0.x`. The README says "Spring Boot 3.x", but that's wrong for these modules.
-- Several modules don't use `mycrm-parent` at all: `ai-service` uses Boot 3.3.0, and `project-service` and `urlshortner` use Boot 4.0.3, so all three are on `jakarta.*`. `ai-service` and `project-service` are **not** listed in the root `<modules>`, so build them from their own directories.
+- **Java 17 is set in one place.** The root `pom.xml` (`com.clinch:clinch-parent`; every module uses groupId `com.clinch`) inherits `spring-boot-starter-parent:2.7.15`, which turns `java.version=17` into `release=17` and supplies the plugin versions (JUnit 5-capable Surefire 2.22.2). **Don't add `<source>`/`<target>` to a module's `maven-compiler-plugin`**, because that overrides the parent. IntelliJ's "Set language level" quick-fix does exactly that, so decline it and reload the Maven project instead.
+- **Mixed Spring Boot generations.** `clinch-parent` pins **Spring Boot 2.7.15**. Most services inherit it, so they use `javax.*` (for example `javax.validation`), not `jakarta.*`, and Spring Cloud `2021.0.x`. The README says "Spring Boot 3.x", but that's wrong for these modules.
+- Several modules don't use `clinch-parent` at all: `ai-service` uses Boot 3.3.0, and `project-service` and `urlshortner` use Boot 4.0.3, so all three are on `jakarta.*`. `ai-service` and `project-service` are **not** listed in the root `<modules>`, so build them from their own directories.
 - Spring Cloud versions differ between services (2021.0.1, 2021.0.2 and 2021.0.8). Check the service's own pom before adding cloud dependencies.
 
 ## Architecture

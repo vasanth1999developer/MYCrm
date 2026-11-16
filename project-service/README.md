@@ -38,7 +38,7 @@ com.clinch.crm.project
 
 ## Building it out (checklist)
 
-1. **Pick a generation.** Either move it under `mycrm-parent` (Boot 2.7, `javax.*`, like the other services), or stay on Boot 4 and add Spring Cloud **2025.1.x** for Eureka. The 2021.0.x trains the other services use don't support Boot 4.
+1. **Pick a generation.** Either move it under `clinch-parent` (Boot 2.7, `javax.*`, like the other services), or stay on Boot 4 and add Spring Cloud **2025.1.x** for Eureka. The 2021.0.x trains the other services use don't support Boot 4.
 2. Add the Eureka client and `eureka.client.serviceUrl.defaultZone=http://localhost:8555/eureka`.
 3. Add `spring-boot-starter-data-jpa` + `mysql-connector-j`, and create schema `ms_mybiz_project`.
 4. Map controllers under `/project/...` (the gateway doesn't strip the prefix).

@@ -14,7 +14,7 @@ A **placeholder** for an internal URL-shortening utility. It's a freshly generat
 | Base package | `com.clinch.crm.urlshortener` |
 | Needs | nothing |
 
-It **is** listed in the root `<modules>`, so `mvn install` from the root builds it, but it uses its own Spring Boot 4 parent instead of `mycrm-parent`.
+It **is** listed in the root `<modules>`, so `mvn install` from the root builds it, but it uses its own Spring Boot 4 parent instead of `clinch-parent`.
 
 ## Run
 

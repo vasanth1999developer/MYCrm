@@ -2,7 +2,7 @@
 
 Owns **login users** and **issues JWTs**. When a user signs in, it checks the password, asks authorization-service for the privileges of the user's roles, and returns a signed token that the gateway accepts on every later request. It also creates login users on behalf of employee-service.
 
-> The Java base package is `com.clinch.crm.authentication`. The old misspelling survives only in the Maven artifact (`authendication-service`) and the MySQL schema (`ms_mybiz_authendication`); renaming the schema would cut the service off from existing data.
+> The Java base package is `com.clinch.crm.authentication`. The Maven coordinates are `com.clinch:authentication-service`. The old misspelling survives only in the MySQL schema (`ms_mybiz_authendication`); renaming it would cut the service off from existing data.
 
 ## At a glance
 

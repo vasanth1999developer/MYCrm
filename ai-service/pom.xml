@@ -12,11 +12,11 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.mycrm</groupId>
+    <groupId>com.clinch</groupId>
     <artifactId>ai-service</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <name>ai-service</name>
-    <description>AI integration microservice for MyCrm (lead summarization, semantic search)</description>
+    <description>Clinch CRM: AI integration (lead summarization, semantic search)</description>
 
     <properties>
         <java.version>17</java.version>
