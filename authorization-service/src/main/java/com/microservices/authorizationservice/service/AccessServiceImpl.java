@@ -7,6 +7,7 @@ import com.microservices.authorizationservice.common.AccessSpecification;
 import com.microservices.authorizationservice.common.CursorResponse;
 import com.microservices.authorizationservice.common.PaginatedResponse;
 import com.microservices.authorizationservice.customexception.DuplicateResourceException;
+import com.microservices.authorizationservice.customexception.ResourceNotFoundException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
@@ -48,7 +49,7 @@ public class AccessServiceImpl implements AccessService {
 		}
 
 		if (accessRepository.existsByAccessNameAndIsDeleted(String.valueOf(accessBo.getAccessName()), false)) {
-			throw new DuplicateResourceException("Access already exists");
+			throw new DuplicateResourceException("Access already exists....");
 		}
 
 		AccessVo accessVo = new AccessVo();
@@ -61,7 +62,9 @@ public class AccessServiceImpl implements AccessService {
 	public AccessBo getAccessByAccessId(int accessId) {
 		AccessBo accessBo = null;
 		try {
-			AccessVo accessVo = accessRepository.findById(accessId).orElse(null);
+
+			AccessVo accessVo = accessRepository.findById(accessId)
+					.orElse(null);
 			if (accessVo != null) {
 				accessBo = new AccessBo();
 				BeanUtils.copyProperties(accessVo, accessBo);
@@ -132,21 +135,21 @@ public class AccessServiceImpl implements AccessService {
 	public PaginatedResponse<AccessBo> getAccess(int page, int size, String searchText, String sortBy, String direction) {
 
 
-		// ✅ Validate
+
 		if (page < 0) page = 0;
 		if (size < 1) size = 1;
 		if (size > 100) size = 100;
 		if (!ALLOWED_SORT_FIELDS.contains(sortBy)) sortBy = "id";
 
-		// ✅ Sort
+
 		Sort sort = direction.equalsIgnoreCase("desc")
 				? Sort.by(sortBy).descending()
 				: Sort.by(sortBy).ascending();
 
-		// ✅ Pageable
+
 		Pageable pageable = PageRequest.of(page, size, sort);
 
-		// ✅ Filter
+
 		Specification<AccessVo> spec = Specification
 				.where(AccessSpecification.notDeleted())
 				.and(AccessSpecification.searchText(searchText));
@@ -170,20 +173,17 @@ public class AccessServiceImpl implements AccessService {
 
 	@Override
 	public boolean updateAccess(AccessBo accessBo) {
-		boolean updationStatus = false;
-		try {
-			if (accessBo != null) {
-				AccessVo accessVo = accessRepository.findById(accessBo.getAccessId()).orElse(null);
-				BeanUtils.copyProperties(accessBo, accessVo);
-				accessVo = accessRepository.save(accessVo);
-				if ((accessVo != null) && accessVo.getAccessId() > 0) {
-					updationStatus = true;
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
+		if (accessBo == null || accessBo.getAccessId() <= 0) {
+			return false;
 		}
-		return updationStatus;
+
+		AccessVo existing = accessRepository.findById(accessBo.getAccessId())
+				.orElseThrow(() -> new ResourceNotFoundException(
+						"Access not found: " + accessBo.getAccessId()));
+
+		existing.setAccessName(accessBo.getAccessName());
+		accessRepository.save(existing);
+		return true;
 	}
 
 	@Override

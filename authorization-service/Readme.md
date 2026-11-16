@@ -1,103 +1,151 @@
-# 🔐 Role Definitions – CRM System
+# authorization-service
 
-This CRM system follows a **Role-Based Access Control (RBAC)** model to ensure secure and structured access across different business domains and microservices.
+The platform's **role-based access control (RBAC) store**. It manages **roles**, the **privileges** each role grants, and the **access** entries each privilege covers. authentication-service calls it at sign-in to turn a user's roles into privileges, which are embedded in the JWT. employee-service calls it to check that a role exists.
 
-Below are the defined roles and their responsibilities:
+> Privileges reach every service in the `X-User-Privileges` header, but **no endpoint enforces them yet**. See [docs/SECURITY.md](../docs/SECURITY.md#7-rbac-authorization-service).
 
----
+## At a glance
 
-## 🏆 SUPER_ADMIN
+| | |
+|---|---|
+| Port | **8778** |
+| Eureka name | `authorization-service` |
+| Gateway prefix | `/authorization` |
+| Database | MySQL `ms_mybiz_authorization` |
+| Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.8 · Spring Data JPA · Log4j2 (+ Splunk appender) |
+| Base package | `com.microservices.authorizationservice` |
+| Needs | MySQL schema, env var `GATEWAY_SECRET` |
 
-* Has full access across the entire platform.
-* Manages system-wide configurations, tenants (companies), and role definitions.
-* Responsible for overall system governance.
+## Run
 
----
+```bash
+mvn spring-boot:run
+```
 
-## 🏢 ADMIN
+Start it **before** authentication-service, because sign-in fails if it can't be reached.
 
-* Manages all operations within a specific organization/company.
-* Can create and manage employees, assign roles, and oversee business data.
-* Has full access to all modules within their organization.
+## Data model
 
----
+```
+RoleVo (role) ──many-to-many──► PrivilegeVo (privilege) ──many-to-many──► AccessVo (access)
+```
 
-## 💼 SALES_MANAGER
+| Entity → table | Fields |
+|---|---|
+| `RoleVo` → `role` | `roleId`, `roleName`, `isActive`, `isDeleted`, `privileges` |
+| `PrivilegeVo` → `privilege` | `privilegeId`, `privilegeName`, `isDelete`, `accesses` |
+| `AccessVo` → `access` | `accessId`, `accessName`, `isDeleted` |
 
-* Oversees sales team activities and performance.
-* Can view and manage all leads, opportunities, and sales data for the team.
-* Responsible for approvals and reporting.
+Deletes are **soft deletes** (flags). `PATCH /role/switch-activity/{id}` toggles `isActive`. Inactive roles grant no privileges at sign-in.
 
----
+## API
 
-## 🤝 SALES_EXECUTIVE
+All paths are reached through the gateway at `http://localhost:8556` and need a JWT. Responses use the `ApiResponse` envelope. Validation and not-found errors are mapped by `common/GlobalExceptionHandler` (`DuplicateResourceException`, `ResourceNotFoundException`).
 
-* Handles day-to-day sales activities.
-* Can create and manage leads, opportunities, and customer data.
-* Access is restricted to their own assigned records.
+### Roles: `/authorization/role`
 
----
+| Method | Path | Body / params | Notes |
+|---|---|---|---|
+| `GET` | `/check-duplicate` | `?roleName=` | `true` if the name is taken |
+| `POST` | `/create` | `RoleBo {roleName, isActive, privileges:[PrivilegeBo]}` | |
+| `GET` | `/view/{roleId}` | — | |
+| `GET` | `/list/{pageIndex}/{pageSize}` | `?sortOrder=&searchText=` | paginated |
+| `PUT` | `/update` | `RoleBo` (with `roleId`) | |
+| `PATCH` | `/switch-activity/{roleId}` | — | toggles active (⚠️ the gateway's CORS config doesn't allow PATCH from browsers) |
+| `DELETE` | `/delete/{roleId}` | — | soft delete |
+| `POST` | `/bulk` | `[RoleBo]` | bulk create |
+| `GET` | `/exists` | `?roleName=` | used by employee-service |
 
-## 🛠 SUPPORT_MANAGER
+### Privileges: `/authorization/privilege`
 
-* Manages customer support operations.
-* Assigns tickets/tasks to support agents and monitors resolution progress.
-* Has visibility into all support-related data.
+| Method | Path | Body / params | Notes |
+|---|---|---|---|
+| `GET` | `/check-duplicate` | `?privilegeName=` | |
+| `POST` | `/create` | `PrivilegeBo {privilegeName, accesses:[AccessBo]}` | |
+| `GET` | `/list/{pageIndex}/{pageSize}` | `?sortOrder=&searchText=` | |
+| `GET` | `/view/{privilegeId}` | — | |
+| `PUT` | `/update` | `PrivilegeBo` | |
+| `DELETE` | `/delete/{privilegeId}` | — | soft delete |
+| `GET` | `/list-all` | — | |
+| `POST` | `/bulk` | `[PrivilegeBo]` | |
+| `POST` | `/privileges` | `["ROLE_A","ROLE_B"]` | **used at sign-in**: returns the set of privilege names granted by the *active* roles given |
 
----
+### Access entries: `/authorization/access`
 
-## 🎧 SUPPORT_AGENT
+| Method | Path | Body / params | Notes |
+|---|---|---|---|
+| `POST` | `/create` | `AccessBo {accessName}` | |
+| `GET` | `/get-access/{accessId}` | — | id must be ≥ 1 |
+| `GET` | `/list` | `?page=0&size=10&searchText=&sortBy=accessId&direction=asc` | the cases tested are listed in [list test.md](list%20test.md) (size ≤ 0 → 400, size > 50 → capped) |
+| `PUT` | `/update` | `AccessBo` | |
+| `DELETE` | `/delete/{accessId}` | — | |
+| `GET` | `/list-all` | — | |
 
-* Handles customer issues, tickets, and support tasks.
-* Works on assigned cases and updates their status.
-* Limited to assigned or owned records.
+`AuthorizationController` (`/authorization`) has no endpoints.
 
----
+## Calls and callers
 
-## 📦 INVENTORY_MANAGER
+| Direction | Service | Endpoint |
+|---|---|---|
+| ← called by | authentication-service | `POST /authorization/privilege/privileges` (sign-in) |
+| ← called by | employee-service | `GET /authorization/role/exists` |
+| ← called by | clients via gateway | `/authorization/**` |
 
-* Manages product catalog and inventory levels.
-* Responsible for stock updates, product details, and availability tracking.
+It makes no outgoing calls. `SyncCall/AuthorizationClient` is dead code: it points at itself and at a non-existent path, and Feign isn't enabled. Incoming requests need `X-Gateway-Secret` (`gatewayauth/GatewayAuthFilter`).
 
----
+## Configuration
 
-## 📊 PROJECT_MANAGER
+| Property | Value |
+|---|---|
+| `server.port` | 8778 |
+| `gateway.secret` | `${GATEWAY_SECRET}` |
+| `spring.datasource.*` | `jdbc:mysql://localhost:3306/ms_mybiz_authorization`, `root` / `admin` |
+| `management.endpoints.web.exposure.include` | `*` (all actuator endpoints. They're behind the gateway-secret filter, but narrow this outside dev) |
+| logging | `log4j2-spring.xml` (Splunk library on the classpath) |
 
-* Oversees project execution and task management.
-* Assigns tasks, tracks progress, and ensures timely delivery of projects.
+## Role catalogue
 
----
+The roles the platform is designed around. They're created as data through `/authorization/role`, not hard-coded.
 
-## 💰 ACCOUNT_MANAGER
+| Role | Scope | Responsibilities |
+|---|---|---|
+| `SUPER_ADMIN` | whole platform | system-wide configuration, tenants (companies), role definitions, governance |
+| `ADMIN` | one organisation | all operations in the company; creates employees, assigns roles |
+| `SALES_MANAGER` | team | manages all leads, opportunities and sales data for the team; approvals, reporting |
+| `SALES_EXECUTIVE` | own records | day-to-day sales: leads, opportunities, customers it owns |
+| `SUPPORT_MANAGER` | support org | assigns and monitors support tickets/tasks |
+| `SUPPORT_AGENT` | assigned records | works on assigned cases |
+| `INVENTORY_MANAGER` | inventory | product catalogue, stock, availability |
+| `PROJECT_MANAGER` | projects | project execution, task assignment, delivery |
+| `ACCOUNT_MANAGER` | accounts | sales orders, transactions, account records |
+| `EMPLOYEE` | self | own profile and assigned tasks |
+| `SYSTEM` | internal | service-to-service identity, never assigned to people |
 
-* Handles financial and account-related operations.
-* Manages sales orders, transactions, and account records.
+Data access is meant to be layered as **own data → team data → organisation-wide data**. That layering isn't implemented yet.
 
----
+## Code layout
 
-## 👨‍💻 EMPLOYEE
+```
+com.microservices.authorizationservice
+├── controller/       RoleController, PrivilegeController, AccessController, AuthorizationController (empty)
+├── service/          Role/Privilege/AccessService (+Impl)
+├── repository/       RoleRepository (findActiveByRoleNames, …), PrivilegeRepository, AccessRepository
+├── entity/           RoleVo, PrivilegeVo, AccessVo
+├── model/            RoleBo, PrivilegeBo, AccessBo
+├── common/           ApiResponse, PaginatedResponse, CursorResponse, AccessSpecification, GlobalExceptionHandler
+├── customexception/  DuplicateResourceException, ResourceNotFoundException
+├── gatewayauth/      GatewayAuthFilter
+└── SyncCall/         AuthorizationClient (unused)
+```
 
-* Basic system user with limited access.
-* Can view and update personal profile and assigned tasks.
+## Tests
 
----
+Only `AuthorizationServiceApplicationTests.contextLoads`. The manual test matrix for `/access/list` is in [list test.md](list%20test.md).
 
-## ⚙️ SYSTEM
+## Known issues
 
-* Internal role used for service-to-service communication.
-* Ensures secure interaction between microservices (e.g., authentication, gateway).
-* Not assigned to human users.
+* 🔴 Privileges aren't enforced anywhere.
+* 🟡 Dead Feign client `SyncCall/AuthorizationClient`.
+* 🟡 Actuator exposes everything (`*`).
 
----
-
-## 🔒 Access Control Model
-
-* Permissions are assigned to roles based on business responsibilities.
-* Data access is controlled at multiple levels:
-
-    * **Own Data**
-    * **Team Data**
-    * **Organization-wide Data**
-* Designed to support scalability, security, and clear separation of concerns.
-
----
+See [docs/KNOWN_ISSUES.md](../docs/KNOWN_ISSUES.md).

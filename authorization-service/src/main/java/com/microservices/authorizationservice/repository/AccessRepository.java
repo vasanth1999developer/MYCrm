@@ -32,4 +32,7 @@ public interface AccessRepository extends JpaRepository<AccessVo, Integer>, JpaS
 			@Param("cursor")     Integer cursor,
 			@Param("searchText") String searchText,
 			Pageable pageable);
+
+	boolean existsByAccessIdAndIsDeleted(int accessId, boolean b);
+
 }

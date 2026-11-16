@@ -1,150 +1,170 @@
 package com.microservices.authorizationservice.controller;
 
-import java.util.Set;
-
+import com.microservices.authorizationservice.common.ApiResponse;
+import com.microservices.authorizationservice.model.PrivilegeBo;
+import com.microservices.authorizationservice.service.PrivilegeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import com.microservices.authorizationservice.model.AccessBo;
-import com.microservices.authorizationservice.model.PrivilegeBo;
-import com.microservices.authorizationservice.service.PrivilegeService;
+import javax.validation.Valid;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
 //@CrossOrigin(origins="*")
 @RestController
 @RequestMapping("/authorization/privilege")
 public class PrivilegeController {
 
-	@Autowired
-	public PrivilegeService service;
+    @Autowired
+    public PrivilegeService service;
 
-	@GetMapping("check-duplicate")
-	public ResponseEntity<?> checkDuplicateName(@RequestParam("privilegeName") String privilegeName) {
-		try {
-			if (privilegeName != null) {
-				if (service.checkDuplicateName(privilegeName)) {
-					return new ResponseEntity<Boolean>(true, HttpStatus.CONFLICT);
-				} else {
-					return ResponseEntity.ok(false);
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return ResponseEntity.internalServerError().body("internal server error");
-	}
+    @GetMapping("check-duplicate")
+    public ResponseEntity<ApiResponse<Boolean>> checkDuplicateName(@RequestParam("privilegeName") String privilegeName) {
 
-	@PostMapping("create")
-	public ResponseEntity<PrivilegeBo> createPrivilege(@RequestBody PrivilegeBo privilegeBo) {
-		try {
-			if (privilegeBo != null) {
-				privilegeBo = service.createPrivilege(privilegeBo);
-				return new ResponseEntity<PrivilegeBo>(privilegeBo, HttpStatus.OK);
-			} else {
-				return new ResponseEntity<PrivilegeBo>(privilegeBo, HttpStatus.NO_CONTENT);
-			}
+        if (privilegeName == null || privilegeName.trim().isEmpty()) {
+            throw new IllegalArgumentException("privilege name cannot be null or empty");
 
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return new ResponseEntity<PrivilegeBo>(privilegeBo, HttpStatus.NO_CONTENT);
+        }
 
-	}
+        boolean status = service.checkDuplicateName(privilegeName);
 
-	@GetMapping("list/{pageIndex}/{pageSize}")
-	public ResponseEntity<Page<PrivilegeBo>> listPrivilege(@PathVariable("pageIndex") int pageIndex,
-			@PathVariable("pageSize") int pageSize, @RequestParam(name = "sortOrder",required=false) String sortOrder,
-			@RequestParam(name="searchText",required=false) String searchText) {
-		Page<PrivilegeBo> privilegeList = null;
-		try {
-			if (pageIndex > 0 || pageSize > 0 && sortOrder != null || null != searchText) {
-				privilegeList = service.listAllPrivileges(pageIndex, pageSize, sortOrder, searchText);
-				if(!privilegeList.isEmpty() && privilegeList!=null) {
-					return new ResponseEntity<Page<PrivilegeBo>>(privilegeList,HttpStatus.OK);
-				}else {
-					return new ResponseEntity<Page<PrivilegeBo>>(privilegeList,HttpStatus.NO_CONTENT);
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+        if (status) {
+            return new ResponseEntity<>(
+                     ApiResponse.error( "Duplicate is there.."),HttpStatus.CONFLICT
+            );
+        } else {
+            return ResponseEntity.ok(
+                     ApiResponse.error( "privilege name is available")
+            );
+        }
 
-		return new ResponseEntity<Page<PrivilegeBo>>(privilegeList, HttpStatus.NO_CONTENT);
-	}
-	
-	
-   @GetMapping("view/{privilegeId}")
-   public ResponseEntity<PrivilegeBo> viewPrivilege(@PathVariable("privilegeId") int privilegeId){
-	   PrivilegeBo privilegeBo=null;
-	   try {
-		   if(privilegeId>0) {
-			 privilegeBo=service.findIdByPrivilege(privilegeId);
-			 if(null !=privilegeBo) {
-				 return new ResponseEntity<PrivilegeBo>(privilegeBo,HttpStatus.OK);
-			 }
-		   }   
-	   }catch (Exception e) {
-		e.printStackTrace();
-	}
-	   return new ResponseEntity<PrivilegeBo>(privilegeBo,HttpStatus.NO_CONTENT);
-	   
-   }
-   
-   @PutMapping("update")
-   public ResponseEntity<?> updatePrivilege(@RequestBody PrivilegeBo privilegeBo){ 
-	   try {
-		   if(privilegeBo!=null) { 
-			   if(service.updatePrivilege(privilegeBo)) {
-				   return new ResponseEntity<Boolean>(true,HttpStatus.OK);
-			   }else {
-				   return new ResponseEntity<Boolean>(false,HttpStatus.OK);
-			   }
-		   }
-	   }catch (Exception e) {
-	}
-	   return ResponseEntity.internalServerError().body("internal server error");
-   }
-   
-   @DeleteMapping("delete/{privilegeId}")
-   public ResponseEntity<?> deletePrivilege(@PathVariable("privilegeId") int privilegeId){
-	   
-	 try {
-		 if(privilegeId>0) {
-			 if(service.deletePrivilege(privilegeId)) {
-				 return new ResponseEntity<Boolean>(true,HttpStatus.OK);
-			 }else {
-				 return new ResponseEntity<Boolean>(false,HttpStatus.NO_CONTENT);
-			 }
-		 } 
-	 }catch (Exception e) {
-		e.printStackTrace();
-	}  
-	 return ResponseEntity.internalServerError().body("internal server error");
-   }
-   
-   @GetMapping("list-all")
-	public ResponseEntity<?> getAllPrivileges(){
-		try {
-				Set<PrivilegeBo> privileges = service.listAllPrivileges();
-				if (privileges != null) {
-					return ResponseEntity.ok(privileges);
-				} else {
-					return ResponseEntity.internalServerError().body("Error while fetching set of privileges");
-				}
-		} catch (Exception e) {
-			e.printStackTrace();
-			return ResponseEntity.internalServerError().body("Internal Server Error");
-		}
-	}
-   
+    }
+
+    @PostMapping("create")
+    public ResponseEntity<ApiResponse<PrivilegeBo>> createPrivilege(@Valid @RequestBody PrivilegeBo privilegeBo) {
+
+
+        PrivilegeBo privilegeBoResponse = service.createPrivilege(privilegeBo);
+
+        if (privilegeBoResponse == null){
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body( ApiResponse.error( "privilege creation is failed"));
+        }
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body( ApiResponse.success( "privilege created successfully", privilegeBoResponse));
+    }
+
+    @GetMapping("list/{pageIndex}/{pageSize}")
+    public ResponseEntity<Page<PrivilegeBo>> listPrivilege(@PathVariable("pageIndex") int pageIndex,
+                                                           @PathVariable("pageSize") int pageSize, @RequestParam(name = "sortOrder", required = false) String sortOrder,
+                                                           @RequestParam(name = "searchText", required = false) String searchText) {
+        Page<PrivilegeBo> privilegeList = null;
+        try {
+            if (pageIndex > 0 || pageSize > 0 && sortOrder != null || null != searchText) {
+                privilegeList = service.listAllPrivileges(pageIndex, pageSize, sortOrder, searchText);
+                if (!privilegeList.isEmpty() && privilegeList != null) {
+                    return new ResponseEntity<Page<PrivilegeBo>>(privilegeList, HttpStatus.OK);
+                } else {
+                    return new ResponseEntity<Page<PrivilegeBo>>(privilegeList, HttpStatus.NO_CONTENT);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return new ResponseEntity<Page<PrivilegeBo>>(privilegeList, HttpStatus.NO_CONTENT);
+    }
+
+
+    @GetMapping("view/{privilegeId}")
+    public ResponseEntity<ApiResponse<PrivilegeBo>> viewPrivilege(@PathVariable("privilegeId") int privilegeId) {
+
+
+            if (privilegeId > 0) {
+                return ResponseEntity.badRequest().body( ApiResponse.error("Please provide a valid Privilege ID"));
+
+            }
+
+           PrivilegeBo  privilegeBo = service.findIdByPrivilege(privilegeId);
+        if (null != privilegeBo) {
+            return ResponseEntity.ok( ApiResponse.success( "fetched successfully", privilegeBo));
+        }
+           return ResponseEntity.status(HttpStatus.NOT_FOUND).body( ApiResponse.error("Privilege is not fount for the ID "+privilegeId));
+
+    }
+
+    @PutMapping("update")
+    public ResponseEntity<?> updatePrivilege(@RequestBody PrivilegeBo privilegeBo) {
+        try {
+            if (privilegeBo != null) {
+                if (service.updatePrivilege(privilegeBo)) {
+                    return new ResponseEntity<Boolean>(true, HttpStatus.OK);
+                } else {
+                    return new ResponseEntity<Boolean>(false, HttpStatus.OK);
+                }
+            }
+        } catch (Exception e) {
+        }
+        return ResponseEntity.internalServerError().body("internal server error");
+    }
+
+    @DeleteMapping("delete/{privilegeId}")
+    public ResponseEntity<?> deletePrivilege(@PathVariable("privilegeId") int privilegeId) {
+
+        try {
+            if (privilegeId > 0) {
+                if (service.deletePrivilege(privilegeId)) {
+                    return new ResponseEntity<Boolean>(true, HttpStatus.OK);
+                } else {
+                    return new ResponseEntity<Boolean>(false, HttpStatus.NO_CONTENT);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return ResponseEntity.internalServerError().body("internal server error");
+    }
+
+    @GetMapping("list-all")
+    public ResponseEntity<?> getAllPrivileges() {
+        try {
+            Set<PrivilegeBo> privileges = service.listAllPrivileges();
+            if (privileges != null) {
+                return ResponseEntity.ok(privileges);
+            } else {
+                return ResponseEntity.internalServerError().body("Error while fetching set of privileges");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("Internal Server Error");
+        }
+    }
+
+
+    @PostMapping("/bulk")
+    public ResponseEntity<List<PrivilegeBo>> createPrivileges(@RequestBody List<PrivilegeBo> privilegeBos) {
+        List<PrivilegeBo> saved = new ArrayList<>();
+        for (PrivilegeBo bo : privilegeBos) {
+            PrivilegeBo result = service.createPrivilege(bo);
+            if (result != null) {
+                saved.add(result);
+            }
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
+
+    @PostMapping("/privileges")
+    public ResponseEntity<ApiResponse<Set<String>>> getPrivilegesForRoles(
+            @RequestBody Set<String> roleNames) {
+        Set<String> privileges = service.getPrivilegeNamesByRoleNames(roleNames);
+        return ResponseEntity.ok(
+                ApiResponse.success("Privileges fetched", privileges));
+    }
+
+
 }

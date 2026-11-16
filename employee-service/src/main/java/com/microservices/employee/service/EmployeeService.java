@@ -8,12 +8,8 @@ public interface EmployeeService {
 
 	EmployeeBo createEmployee(EmployeeBo employee);
 
-	List<EmployeeBo> getAllEmployee();
+	List<EmployeeBo> getAllEmployees();
 
-	EmployeeBo updateEmployee(EmployeeBo employeeBo);
 
-	EmployeeBo getEmployeeById(long employeeId);
-
-	boolean deleteemployee(long employeeId);
 	
 }

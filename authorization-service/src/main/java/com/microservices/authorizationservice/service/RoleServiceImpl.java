@@ -1,11 +1,8 @@
 package com.microservices.authorizationservice.service;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
+import com.microservices.authorizationservice.repository.PrivilegeRepository;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -26,6 +23,9 @@ public class RoleServiceImpl implements RoleService {
 
 	@Autowired
 	RoleRepository roleRepository;
+
+	@Autowired
+	public PrivilegeRepository privilegeRepository;
 
 	@Override
 	public boolean isDuplicateRole(String roleName) {
@@ -49,17 +49,22 @@ public class RoleServiceImpl implements RoleService {
 				RoleVo roleVo = new RoleVo();
 				roleVo.setRoleName(roleBo.getRoleName());
 				roleVo.setActive(true);
-				Set<PrivilegeVo> setVo = new TreeSet<>(Comparator.comparing(PrivilegeVo::getPrivilegeName));
+
+				Set<PrivilegeVo> setVo = new HashSet<>();
 				Set<PrivilegeBo> setBo = roleBo.getPrivileges();
-				if ((setBo != null) && (!setBo.isEmpty())) {
+
+				if (setBo != null && !setBo.isEmpty()) {
 					for (PrivilegeBo privilegeBo : setBo) {
-						PrivilegeVo privilegeVo = new PrivilegeVo();
-						BeanUtils.copyProperties(privilegeBo, privilegeVo);
+
+						PrivilegeVo privilegeVo = privilegeRepository
+								.findById(privilegeBo.getPrivilegeId())
+								.orElseThrow(() -> new RuntimeException(
+										"Privilege not found: " + privilegeBo.getPrivilegeId()));
 						setVo.add(privilegeVo);
 					}
 					roleVo.setPrivileges(setVo);
 					roleVo = roleRepository.save(roleVo);
-					if ((roleVo != null) && roleVo.getRoleId() > 0) {
+					if (roleVo != null && roleVo.getRoleId() > 0) {
 						creationStatus = true;
 					}
 				}

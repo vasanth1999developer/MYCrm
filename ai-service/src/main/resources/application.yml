@@ -1,0 +1,39 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: ai-service
+  datasource:
+    # Point this at the same Postgres instance the rest of MyCrm uses.
+    # pgvector extension must be enabled: CREATE EXTENSION IF NOT EXISTS vector;
+    url: jdbc:postgresql://localhost:5432/mycrm
+    username: ${DB_USERNAME:mycrm}
+    password: ${DB_PASSWORD:mycrm}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+claude:
+  api-key: ${ANTHROPIC_API_KEY:}
+  base-url: https://api.anthropic.com/v1/messages
+  model: claude-sonnet-4-6
+  max-tokens: 1024
+  timeout-seconds: 30
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+resilience4j:
+  retry:
+    instances:
+      claudeApi:
+        max-attempts: 3
+        wait-duration: 500ms
+        retry-exceptions:
+          - org.springframework.web.reactive.function.client.WebClientResponseException.TooManyRequests
+          - java.util.concurrent.TimeoutException

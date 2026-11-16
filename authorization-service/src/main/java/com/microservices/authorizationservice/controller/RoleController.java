@@ -1,5 +1,7 @@
 package com.microservices.authorizationservice.controller;
 
+import com.microservices.authorizationservice.common.ApiResponse;
+import com.microservices.authorizationservice.repository.RoleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -23,11 +25,15 @@ import com.microservices.authorizationservice.service.RoleService;
 
 import lombok.extern.log4j.Log4j2;
 
+import java.util.List;
+
 //@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/authorization/role")
 @Log4j2
 public class RoleController {
+	@Autowired
+	RoleRepository roleRepository;
 
 	@Autowired
 	RoleService roleService;
@@ -174,5 +180,25 @@ public class RoleController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal Server Error");
 		}
 	}
+
+
+	@PostMapping("/bulk")
+	public ResponseEntity<String> createRoles(@RequestBody List<RoleBo> roleBos) {
+		int created = 0;
+		for (RoleBo bo : roleBos) {
+			if (roleService.createRole(bo)) {
+				created++;
+			}
+		}
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body(created + " of " + roleBos.size() + " roles created");
+	}
+
+
+	@GetMapping("/exists")
+	public ApiResponse<Boolean> roleExists(@RequestParam("roleName") String roleName) {
+		return ApiResponse.success("Role check", roleRepository.existsByRoleName(roleName));
+	}
+
 
 }

@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import javax.validation.Valid;
 
 import com.microservices.authendicationservice.response.ApiResponse;
+import com.microservices.authendicationservice.services.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -53,105 +54,89 @@ public class AuthController {
 	@Autowired
 	JwtUtils jwtUtils;
 
+	@Autowired
+	AuthService authService;
+
+//	@PostMapping("/signin")
+//	public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequestDto loginRequest) {
+//
+//		Authentication authentication = authenticationManager.authenticate(
+//				new UsernamePasswordAuthenticationToken(
+//						loginRequest.getUsername(),
+//						loginRequest.getPassword()
+//				)
+//		);
+//
+//		SecurityContextHolder.getContext().setAuthentication(authentication);
+//
+//		UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+//
+//			if (userDetails.getIsDelete()) {
+//				return ResponseEntity
+//						.status(HttpStatus.FORBIDDEN)
+//						.body( ApiResponse.error(
+//
+//								"User account is deactivated",
+//								null));
+//			}
+//
+//		String jwt = jwtUtils.generateJwtToken(authentication);
+//		List<String> roles = userDetails.getAuthorities().stream().map(item -> item.getAuthority())
+//				.collect(Collectors.toList());
+//
+//		JwtResponse response = new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), userDetails.getEmail(), roles);
+//
+//		return ResponseEntity
+//				.status(HttpStatus.OK)
+//				.body( ApiResponse.success(
+//
+//						"User authenticated successfully",
+//						response
+//				));
+//
+//
+//
+//	}
+
+
+
 	@PostMapping("/signin")
-	public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequestDto loginRequest) {
+	public ResponseEntity<ApiResponse<JwtResponse>> authenticateUser(
+			@Valid @RequestBody LoginRequestDto loginRequest) {
 
-		Authentication authentication = authenticationManager.authenticate(
-				new UsernamePasswordAuthenticationToken(
-						loginRequest.getUsername(),
-						loginRequest.getPassword()
-				)
-		);
+		JwtResponse response = authService.signIn(loginRequest);
 
-
-		SecurityContextHolder.getContext().setAuthentication(authentication);
-		
-
-		UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-
-
-			if (userDetails.getIsDelete()) {
-				return ResponseEntity
-						.status(HttpStatus.FORBIDDEN)
-						.body(new ApiResponse<>(
-								false,
-								"User account is deactivated",
-								null));
-			}
-
-		String jwt = jwtUtils.generateJwtToken(authentication);
-		List<String> roles = userDetails.getAuthorities().stream().map(item -> item.getAuthority())
-				.collect(Collectors.toList());
-
-		JwtResponse response = new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), userDetails.getEmail(), roles);
-
-		return ResponseEntity
-				.status(HttpStatus.OK)
-				.body(new ApiResponse<>(
-						true,
-						"User authenticated successfully",
-						response
-				));
-
-
-
+		return ResponseEntity.ok(
+				ApiResponse.success("User authenticated successfully", response));
 	}
 
-	@PostMapping("/signup")
-	public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequestDto signUpRequest) {
 
-		if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-			return ResponseEntity.badRequest().body(new ApiResponse<>(
-					false,
-					"Email is Already there",
-					null));
+
+	@PostMapping("/users")   // admin-only
+	public ResponseEntity<ApiResponse<Long>> createUser(@Valid @RequestBody SignupRequestDto request) {
+
+		if (userRepository.existsByEmail(request.getEmail())) {
+			return ResponseEntity.badRequest().body(ApiResponse.error("Email already exists"));
 		}
 
-
-		User user = new User(signUpRequest.getUsername(), signUpRequest.getEmail(),
-				encoder.encode(signUpRequest.getPassword()));
-
-		Set<String> strRoles = signUpRequest.getRole();
-		Set<Role> roles = new HashSet<>();
-
-		if (strRoles == null) {
-			Role userRole = roleRepository.findByName(ERole.ROLE_EMPLOYEE)
-					.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-			roles.add(userRole);
-		} else {
-			strRoles.forEach(role -> {
-				switch (role) {
-				case "admin":
-					Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
-							.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-					roles.add(adminRole);
-
-					break;
-				case "ROLE_EMPLOYEE":
-					Role employeeRole = roleRepository.findByName(ERole.ROLE_EMPLOYEE)
-					.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-			          roles.add(employeeRole);
-			         break;
-			        
-				default:
-					Role companyRole = roleRepository.findByName(ERole.ROLE_COMPANY)
-						.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-				          roles.add(companyRole);
-				}
-			});
+		Set<String> roleNames = request.getRole();
+		if (roleNames == null || roleNames.isEmpty()) {
+			return ResponseEntity.badRequest().body(ApiResponse.error("At least one role is required"));
 		}
 
-		user.setRoles(roles);
+		User user = new User(
+				request.getUsername(),
+				request.getEmail(),
+				encoder.encode(request.getPassword()));
+		user.setRoles(roleNames);
 		user.setDelete(false);
-		userRepository.save(user);
 
-		return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>(
-				true,
-				"User is created",
-				null));
+		User saved = userRepository.save(user);
 
-
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body(ApiResponse.success("User created", saved.getId()));
 	}
+
 
 
 
@@ -161,8 +146,8 @@ public class AuthController {
 			boolean status = userRepository.existsByEmail(email);
 
 
-		return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>(
-				true,
+		return ResponseEntity.status(HttpStatus.CREATED).body( ApiResponse.success(
+
 				"User is created",
 				status));
     }
@@ -173,9 +158,9 @@ public class AuthController {
 
 		return userRepository.findById(userId)
 				.map(user -> ResponseEntity.ok(
-						new ApiResponse<>(true, "User fetched successfully", user)
+						 ApiResponse.success( "User fetched successfully", user)
 				))
 				.orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
-						.body(new ApiResponse<>(false, "User not found", null)));
+						.body( ApiResponse.error( "User not found", null)));
 	}
 }

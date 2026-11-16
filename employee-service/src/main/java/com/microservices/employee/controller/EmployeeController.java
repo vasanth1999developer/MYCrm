@@ -3,18 +3,12 @@ package com.microservices.employee.controller;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.microservices.employee.common.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.microservices.employee.model.EmployeeBo;
 import com.microservices.employee.service.EmployeeService;
@@ -30,72 +24,49 @@ public class EmployeeController {
 	
 
 	@PostMapping("/create-employee")
-	public ResponseEntity<?> createEmployee(@RequestBody EmployeeBo employee){
-		
+	public ResponseEntity<ApiResponse<EmployeeBo>> createEmployee(@RequestBody  EmployeeBo employee){
+		EmployeeBo	employeeResponse;
 		try {
-			employee.setDelete(false);
-			employee = employeeService.createEmployee(employee);
+				employeeResponse = employeeService.createEmployee(employee);
 		}catch (Exception e) {
 			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.error("Employee creation failed"));
 		}
-		return ResponseEntity.ok(employee);
-		
+		return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Employee is Created",employeeResponse));
+
 	}
-	@GetMapping("/get-all-employees")
-	public ResponseEntity<?> getAllEmployee(){
-		List<EmployeeBo> employeeList = new ArrayList<>();
-		try {
-			
-			employeeList = employeeService.getAllEmployee();
-			if(null!=employeeList && !employeeList.isEmpty() && employeeList.size()>0) {
-				return ResponseEntity.ok(employeeList);
-			}
-		}catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-		return null;
-		
-	}
-	@PutMapping("/update-employee")
-	public ResponseEntity<?> updateEmployee(@RequestBody EmployeeBo employeeBo){
-		
-		try {
-			//employeeBo.setEmployeeId(employeeId);
-			if(null!=employeeBo) {
-			employeeBo = employeeService.updateEmployee(employeeBo);
-			}
-		}catch (Exception e) {
-			e.printStackTrace();
-		}
-		return ResponseEntity.ok(employeeBo);
-		
-	}
-	@GetMapping("/get-employeeById/{id}")
-	public ResponseEntity<?> getemployeeById(@PathVariable("id") long employeeId){
-		EmployeeBo employee =new EmployeeBo();
-		try {
-	
-			employee = employeeService.getEmployeeById(employeeId);
-		}catch (Exception e) {
-			e.printStackTrace();
-		}
-		return ResponseEntity.ok(employee);
-	
-	}
-	
-	@DeleteMapping("/delete-employee/{id}")
-	public ResponseEntity<Boolean> deleteEmployee(@PathVariable("id") long employeeId){
-		boolean status = false;
-		try {
-			status = employeeService.deleteemployee(employeeId);
-			if(status) {
-				return ResponseEntity.ok(status);
-			}
-		}catch (Exception e) {
-			e.printStackTrace();
-		}
-		return ResponseEntity.ok(status);
-		
-	}
+
+
+	@GetMapping("/list-employee")
+	public ResponseEntity<ApiResponse<List<EmployeeBo>>> getAllEmployee(){
+
+
+         List<EmployeeBo> employeeList = List.of();
+
+		 try{
+
+			 employeeList =  employeeService.getAllEmployees();
+
+
+		 }
+         catch (Exception e) {
+			 e.printStackTrace();
+
+			 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
+		 }
+
+		return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Employee is Created",employeeList));
+    }
+
+
+
+
+
+
+
+
+
+
+
+
 }

@@ -1,11 +1,12 @@
 package com.microservices.authorizationservice.service;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
+import java.util.stream.Collectors;
 
+import com.microservices.authorizationservice.entity.RoleVo;
+import com.microservices.authorizationservice.repository.AccessRepository;
+import com.microservices.authorizationservice.repository.RoleRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -13,6 +14,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.microservices.authorizationservice.entity.AccessVo;
@@ -20,12 +22,20 @@ import com.microservices.authorizationservice.entity.PrivilegeVo;
 import com.microservices.authorizationservice.model.AccessBo;
 import com.microservices.authorizationservice.model.PrivilegeBo;
 import com.microservices.authorizationservice.repository.PrivilegeRepository;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.PostMapping;
 
+@Slf4j
 @Service
 public class PrivilegeServiceImpl implements PrivilegeService {
+	@Autowired
+	RoleRepository roleRepository;
 
 	@Autowired
 	public PrivilegeRepository repository;
+
+	@Autowired
+	AccessRepository accessRepository;
 
 	@Override
 	public boolean checkDuplicateName(String privilegeName) {
@@ -46,15 +56,21 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 		try {
 			PrivilegeVo privilegeVo = new PrivilegeVo();
 			BeanUtils.copyProperties(privilegeBo, privilegeVo);
-			Set<AccessVo> setVo = new TreeSet<>(Comparator.comparing(AccessVo::getAccessName));
+
+
+			Set<AccessVo> setVo = new HashSet<>();          // was TreeSet — no comparator, no NPE
 			Set<AccessBo> setBo = privilegeBo.getAccesses();
-			if ((setBo != null) && (!setBo.isEmpty())) {
+
+			if (setBo != null && !setBo.isEmpty()) {
 				for (AccessBo accessBo : setBo) {
-					AccessVo accessVo = new AccessVo();
-					BeanUtils.copyProperties(accessBo, accessVo);
+					// load the real, fully-populated access row instead of a stub
+					AccessVo accessVo = accessRepository.findById(accessBo.getAccessId())
+							.orElseThrow(() -> new RuntimeException(
+									"Access not found: " + accessBo.getAccessId()));
 					setVo.add(accessVo);
 				}
 				privilegeVo.setAccesses(setVo);
+
 				privilegeVo = repository.save(privilegeVo);
 				if (privilegeVo != null) {
 					BeanUtils.copyProperties(privilegeVo, privilegeBo);
@@ -198,5 +214,32 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 		return setBo;
 
 	}
+
+
+
+	@Override
+	@Transactional(readOnly = true)
+	public Set<String> getPrivilegeNamesByRoleNames(Set<String> roleNames) {
+		if (roleNames == null || roleNames.isEmpty()) {
+			return Collections.emptySet();
+		}
+
+		List<RoleVo> roles = roleRepository.findActiveByRoleNames(roleNames);
+
+		log.info("ASKED FOR: {}", roleNames);
+		log.info("ROLES FOUND: {}", roles.size());
+		roles.forEach(r -> log.info("  role '{}' -> privileges: {}",
+				r.getRoleName(),
+				r.getPrivileges() == null ? "NULL" : r.getPrivileges().size()));
+
+		Set<String> result = roles.stream()
+				.flatMap(r -> r.getPrivileges().stream())
+				.map(PrivilegeVo::getPrivilegeName)
+				.collect(Collectors.toCollection(TreeSet::new));
+
+		log.info("RESULT: {}", result.size());
+		return result;
+	}
+
 
 }
