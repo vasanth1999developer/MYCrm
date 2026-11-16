@@ -69,14 +69,14 @@ The gateway also routes `/campaign/**` → `campaign-service` and `/contact/**` 
 
 Prerequisites: **JDK 17**, **Maven 3.6+**, **MySQL 8** on `localhost:3306` (`root` / `admin`), and — only for TaskManagement / product-service — PostgreSQL and RabbitMQ. Full details in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-**1. Set the two shared secrets** (same values for every service). In PowerShell:
+**1. Create the two shared secrets** (same values for every service) in a git-ignored `local-secrets.properties` at the repo root. Every service imports it. In PowerShell, from the repo root:
 
 ```powershell
-$b = New-Object byte[] 64; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); setx JWT_SECRET ([Convert]::ToBase64String($b))
-$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); setx GATEWAY_SECRET ([Convert]::ToBase64String($b))
+$r=[Security.Cryptography.RandomNumberGenerator]::Create(); $j=New-Object byte[] 64; $r.GetBytes($j); $g=New-Object byte[] 32; $r.GetBytes($g)
+"JWT_SECRET=$([Convert]::ToBase64String($j))`nGATEWAY_SECRET=$([Convert]::ToBase64String($g))" | Set-Content -Encoding ascii local-secrets.properties
 ```
 
-Restart your terminal / IDE afterwards. Services refuse to start if either is missing.
+No restart is needed. Services refuse to start if either secret is missing. On servers, set `JWT_SECRET` / `GATEWAY_SECRET` as environment variables instead; they override the file. Details: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#2-environment-variables). **Never commit this file, or put the values in `application.properties`.**
 
 **2. Build** everything from the repo root:
 

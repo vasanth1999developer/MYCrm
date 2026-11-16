@@ -38,6 +38,27 @@ Without the schema, a service stops at startup with `Unknown database 'ms_mybiz_
 | `GATEWAY_SECRET` | gateway-service and every routed service | 32 random bytes, Base64 |
 | `ANTHROPIC_API_KEY` | ai-service | from the Anthropic console |
 
+### Local development: `local-secrets.properties` (recommended)
+
+Every service that needs a secret has `spring.config.import=optional:file:../local-secrets.properties,optional:file:./local-secrets.properties` in its `application.properties`. So you can keep the values in **one git-ignored file at the repo root**, and nothing has to be set in Windows or IntelliJ:
+
+```properties
+# local-secrets.properties (repo root). Never commit it; .gitignore excludes it.
+JWT_SECRET=<64 random bytes, Base64>
+GATEWAY_SECRET=<32 random bytes, Base64>
+```
+
+Create it with random values (PowerShell, from the repo root):
+
+```powershell
+$r=[Security.Cryptography.RandomNumberGenerator]::Create(); $j=New-Object byte[] 64; $r.GetBytes($j); $g=New-Object byte[] 32; $r.GetBytes($g)
+"JWT_SECRET=$([Convert]::ToBase64String($j))`nGATEWAY_SECRET=$([Convert]::ToBase64String($g))" | Set-Content -Encoding ascii local-secrets.properties
+```
+
+The `../` path is found when a service starts from its module folder, which is the default for IntelliJ and `mvn spring-boot:run`. The `./` path is found when it starts from the repo root. Because the import is `optional:`, a missing file is not an error, but the service then fails with `Could not resolve placeholder 'GATEWAY_SECRET'`. **Real environment variables take precedence over the file**, so servers and CI should keep using env vars and don't need the file.
+
+### Environment variables (servers, CI, or instead of the file)
+
 PowerShell (persists for your Windows user; restart the terminal and IntelliJ afterwards):
 
 ```powershell
