@@ -2,7 +2,7 @@
 
 Owns **login users** and **issues JWTs**. When a user signs in, it checks the password, asks authorization-service for the privileges of the user's roles, and returns a signed token that the gateway accepts on every later request. It also creates login users on behalf of employee-service.
 
-> The Java package is spelled `authendicationservice` and the Maven artifact `authendication-service`. Keep that spelling; it's referenced in several places.
+> The Java base package is `com.clinch.crm.authentication`. The Maven coordinates are `com.clinch:authentication-service`. The old misspelling survives only in the MySQL schema (`ms_mybiz_authendication`); renaming it would cut the service off from existing data.
 
 ## At a glance
 
@@ -13,7 +13,7 @@ Owns **login users** and **issues JWTs**. When a user signs in, it checks the pa
 | Gateway prefix | `/auth` |
 | Database | MySQL `ms_mybiz_authendication` |
 | Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.1 · Spring Security · OpenFeign · jjwt 0.11.5 |
-| Base package | `com.microservices.authendicationservice` |
+| Base package | `com.clinch.crm.authentication` |
 | Needs | MySQL schema, authorization-service (for sign-in), env vars `JWT_SECRET`, `GATEWAY_SECRET` |
 
 ## Run
@@ -28,7 +28,7 @@ Base URL through the gateway: `http://localhost:8556`. Responses use the `ApiRes
 
 | Method | Path | Auth | Body / params | Returns |
 |---|---|---|---|---|
-| `POST` | `/auth/signin` | **public** | `{"username": "<email>", "password": "…"}` | `JwtResponse`: `token`, `type` = `Bearer`, `id`, `username`, `email`, `roles`, `isActive` |
+| `POST` | `/auth/signin` | **public** | `{"username": "<email>", "password": "…"}` | `JwtResponse` (JSON keys follow the getters): `accessToken`, `tokenType` = `Bearer`, `id`, `username`, `email`, `roles`, `active` |
 | `GET` | `/auth/signupcheckEmailId/{email}` | **public** | — | `data: true` if the email is already registered |
 | `POST` | `/auth/users` | JWT (intended admin-only, not enforced) | `{"username","email","password","role": ["ROLE_NAME"]}` | `201`, `data:` new user id. `400` if the email exists or no role was given |
 | `GET` | `/auth/get-loggedInUserById/{userId}` | JWT | — | the `User` entity: `id`, `username`, `email`, `isDelete`, `roles` (the password hash is excluded by `@JsonIgnore`) |
@@ -84,7 +84,7 @@ Spring Security (`security/WebSecurityConfig.java`) is stateless, has CSRF off, 
 ## Code layout
 
 ```
-com.microservices.authendicationservice
+com.clinch.crm.authentication
 ├── controller/   AuthController, TestController (demo)
 ├── services/     AuthService(+Impl) sign-in logic, UserDetailsServiceImpl, UserDetailsImpl
 ├── jwt/          JwtUtils (sign/validate), AuthEntryPointJwt (401 entry point)
@@ -100,7 +100,7 @@ com.microservices.authendicationservice
 ## Tests
 
 * `models/UserJsonTest`: checks that the password hash never appears in `User` JSON. It's a unit test and needs no infrastructure.
-* `AuthendicationServiceApplicationTests.contextLoads` needs MySQL and the env vars.
+* `AuthenticationServiceApplicationTests.contextLoads` needs MySQL and the env vars.
 
 ## Known issues
 

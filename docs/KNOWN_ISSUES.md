@@ -11,6 +11,8 @@ These are open problems found while auditing the codebase (November 2026), group
 | | Issue | Where | Fix |
 |---|---|---|---|
 | 🔴 | **No privilege checks per endpoint.** Any authenticated user can call any endpoint, including admin-only ones like `POST /auth/users`. | all services | Check `X-User-Privileges` per endpoint (planned "step C") |
+| 🔴 | **Soft-deleted privileges are still granted at sign-in.** `findActiveByRoleNames` filters roles on `isActive`/`isDeleted` but not their privileges on `isDelete`, so `DELETE /authorization/privilege/delete/{id}` hides a privilege from lists but it keeps appearing in new JWTs. | authorization-service `RoleRepository.findActiveByRoleNames`, `PrivilegeServiceImpl.getPrivilegeNamesByRoleNames` | Filter `p.isDelete = false` in the query (or the stream) |
+| 🟠 | `GET /authorization/role/exists` uses `existsByRoleName`, which also matches **inactive and soft-deleted** roles, so employee-service can assign a role that grants nothing (sign-in then fails with no privileges). | authorization-service `RoleController.roleExists` | Check `isActive = true AND isDeleted = false` |
 | 🟠 | **Company passwords are stored in plain text.** `CompanyBO.password` is copied unchanged into `CompanyVO` and saved. (They're no longer returned by the API.) It's also unclear what this password is for, since nothing in the platform logs in as a company. | company-service `entity/CompanyVO.java` | Remove the field if it's unused, or BCrypt-hash it before saving |
 | 🟠 | `create-employee` has **no `@Valid`**, so the `@Pattern`/`@NotBlank` rules on `EmployeeBo` (password strength etc.) never run. | employee-service `EmployeeController.createEmployee` | Add `@Valid` |
 | 🟠 | DB credentials (`root`/`admin`, `postgres`/`admin`) and RabbitMQ `guest`/`guest` are committed. | every `application.properties` | Use `${DB_PASSWORD}`-style placeholders |
@@ -42,6 +44,8 @@ These are open problems found while auditing the codebase (November 2026), group
 | 🟡 | opportunity-service declares the obsolete `spring-cloud-starter-feign:1.4.7.RELEASE`. It only pulls in openfeign 3.1.8, and the service has no Feign clients. | opportunity-service `pom.xml` | Remove it, or replace with `spring-cloud-starter-openfeign` |
 | 🟡 | Three Spring Boot generations: 2.7 (`javax.*`), 3.3 (ai-service), 4.0 (project-service, urlshortner). Code can't be copied between them unchanged. | — | Decide on one generation for new services |
 | 🟡 | `eureka-service/Dockerfile` uses a Java 11 JRE, which can't run the Java 17 jar, and exposes 8761 instead of 8555. | eureka-service | Use a 17 JRE image, `EXPOSE 8555` |
+| 🟡 | authorization-service's `mvnw`/`mvnw.cmd` don't work: the `.mvn/wrapper` folder is missing. Use a system `mvn`, or another module's wrapper with `-f ../authorization-service/pom.xml`. | authorization-service | Restore `.mvn/wrapper`, or delete the scripts |
+| 🟡 | authentication-service declares `spring-cloud-openfeign-core` twice; Maven warns that future versions may reject the pom. | authentication-service `pom.xml` (around line 94) | Remove the duplicate |
 | 🟡 | Every `jenkinsfile` targets a different repository (`techymeet/mysalesmicroservices2.0`) with hard-coded `F:/` paths and skipped tests. | all modules | Rewrite for this repo |
 | 🟡 | Stale IDE build copies under `account-service/bin` and `salesorder-service/bin` (5 files are tracked in git). | — | `git rm -r` them and add `bin/` to `.gitignore` |
 
@@ -49,9 +53,8 @@ These are open problems found while auditing the codebase (November 2026), group
 
 | | Issue | Where |
 |---|---|---|
-| 🟠 | Unit-test coverage is thin. There are 5 real unit-test classes, covering only the gateway filter, the gateway-secret filter and password serialization. No business logic is tested. | — |
-| 🟠 | The account, customer and lead controller tests boot the whole app, so they need `GATEWAY_SECRET` and a live MySQL schema. | `*/src/test/.../controller/*` |
-| 🟠 | Tests in foreign packages fail with "Unable to find a @SpringBootConfiguration": `com.techymeet.opportunity…` (opportunity), `com.softtwig.product…` (product), `com.microservices.accountservice…` (employee). | those modules' `src/test` |
+| 🟠 | Unit-test coverage is thin. There are 6 real unit-test classes, covering the gateway filter, the gateway-secret filter, password serialization and authorization-service's role update. Almost no business logic is tested. | — |
+| 🟠 | The account, customer, lead, opportunity and product controller tests boot the whole app, so they need `GATEWAY_SECRET` and a live MySQL schema. | `*/src/test/.../controller/*` |
 
 ## Data and behaviour
 
@@ -59,9 +62,17 @@ These are open problems found while auditing the codebase (November 2026), group
 |---|---|---|
 | 🟠 | **No compensation in employee creation:** if saving the employee fails after the login user was created in authentication-service, the exception is swallowed (`printStackTrace`). The user is left without an employee, and the client still gets a success response. | employee-service `EmployeeServiceImpl.createEmployee` |
 | 🟠 | `POST /employee/create-employee` catches every exception and returns **HTTP 201** with `success:false` and the message "Employee creation failed", so an invalid role, a duplicate email or a service outage all look the same. | employee-service `EmployeeController.createEmployee` |
+| 🟠 | Employee responses never include the employee's **id**, **role** or **manager**: `EmployeeBo` has no `employeeId` field, and `role`/`managerId` are `WRITE_ONLY`. A client can't tell which listed employee is which login user. | employee-service `model/EmployeeBo.java` |
+| 🟠 | employee-service has no exception handler: a duplicate department/territory name throws `DuplicateResourceException` and the client gets **500** (Spring's default error JSON) instead of 409. | employee-service `common/` |
+| 🟡 | `GET /employee/list-employee` answers **201** with the message "Employee is Created". | employee-service `EmployeeController.getAllEmployee` |
 | 🟠 | Sign-in errors other than bad credentials (`AccountDeactivatedException`, `AuthorizationUnavailableException`) have no exception handler, so clients get a generic **500** instead of 403 / 503. | authentication-service (no `@RestControllerAdvice`) |
 | 🟡 | Sign-in's `username` field is matched against the user's **email** (`UserDetailsServiceImpl.loadUserByUsername` → `findByEmail`). The name is misleading. | authentication-service |
 | 🟠 | `GET /auth/signupcheckEmailId/{email}` answers with HTTP **201** and the message "User is created" for what is a read-only check. | authentication-service `AuthController.checkEmailId` |
+| 🔴 | `GET /authorization/privilege/view/{id}` can never return a privilege: the check is inverted (`if (privilegeId > 0) return 400`), so real ids get 400 and the rest 404. | authorization-service `PrivilegeController.viewPrivilege` |
+| 🟠 | `GET /authorization/privilege/list/{pageIndex}/{pageSize}` returns **204** for `/list/0/…` without query parameters, and for `sortOrder` without `searchText` (NPE in the service). `searchText` is only applied together with `sortOrder`. | authorization-service `PrivilegeController.listPrivilege`, `PrivilegeServiceImpl.listAllPrivileges` |
+| 🟠 | `GET /authorization/access/list` with a `sortBy` other than `accessId`/`accessName` falls back to `"id"`, which isn't a property, so it answers **500**. | authorization-service `AccessServiceImpl.getAccess` |
+| 🟠 | authorization-service reports "not found" inconsistently: missing roles/privileges/accesses on update/delete/switch give **500** (NPE caught → `false`), `ResourceNotFoundException` has no handler (500), privilege delete gives 204, privilege update gives 200 `false`, and `get-access` gives 200 `success:true`. Role endpoints also return raw bodies instead of `ApiResponse`, and the `list-all` endpoints return 500 for an empty table. | authorization-service controllers and `*ServiceImpl` |
+| 🟡 | authorization-service `ApiResponse.error(message, errors)` drops `errors` (passes `null`). | authorization-service `common/ApiResponse.java` |
 | 🟡 | Older controllers wrap everything in `try { … } catch (Exception e) { e.printStackTrace(); return 500; }`, which hides real errors. | account, lead, inventory, opportunity, company, product, salesorder |
 | 🟡 | RabbitMQ: product-service consumes `FinalProductQueue`, but nothing publishes to it, and `productExchange` isn't bound to the queue. | product-service `config/` |
 | 🟡 | Table name typo `campany`. | company-service `entity/CompanyVO.java` |

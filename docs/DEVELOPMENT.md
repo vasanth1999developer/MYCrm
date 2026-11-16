@@ -38,6 +38,27 @@ Without the schema, a service stops at startup with `Unknown database 'ms_mybiz_
 | `GATEWAY_SECRET` | gateway-service and every routed service | 32 random bytes, Base64 |
 | `ANTHROPIC_API_KEY` | ai-service | from the Anthropic console |
 
+### Local development: `local-secrets.properties` (recommended)
+
+Every service that needs a secret has `spring.config.import=optional:file:../local-secrets.properties,optional:file:./local-secrets.properties` in its `application.properties`. So you can keep the values in **one git-ignored file at the repo root**, and nothing has to be set in Windows or IntelliJ:
+
+```properties
+# local-secrets.properties (repo root). Never commit it; .gitignore excludes it.
+JWT_SECRET=<64 random bytes, Base64>
+GATEWAY_SECRET=<32 random bytes, Base64>
+```
+
+Create it with random values (PowerShell, from the repo root):
+
+```powershell
+$r=[Security.Cryptography.RandomNumberGenerator]::Create(); $j=New-Object byte[] 64; $r.GetBytes($j); $g=New-Object byte[] 32; $r.GetBytes($g)
+"JWT_SECRET=$([Convert]::ToBase64String($j))`nGATEWAY_SECRET=$([Convert]::ToBase64String($g))" | Set-Content -Encoding ascii local-secrets.properties
+```
+
+The `../` path is found when a service starts from its module folder, which is the default for IntelliJ and `mvn spring-boot:run`. The `./` path is found when it starts from the repo root. Because the import is `optional:`, a missing file is not an error, but the service then fails with `Could not resolve placeholder 'GATEWAY_SECRET'`. **Real environment variables take precedence over the file**, so servers and CI should keep using env vars and don't need the file.
+
+### Environment variables (servers, CI, or instead of the file)
+
 PowerShell (persists for your Windows user; restart the terminal and IntelliJ afterwards):
 
 ```powershell
@@ -70,7 +91,7 @@ cd project-service && ./mvnw clean package  # Boot 4.0
 
 ### How versions are controlled
 
-* The root `pom.xml` (`mycrm-parent`) inherits `spring-boot-starter-parent:2.7.15`. That gives every child module the Java level, plugin versions (compiler, Surefire 2.22.2 with JUnit 5) and Spring Boot dependency versions.
+* The root `pom.xml` (`clinch-parent`) inherits `spring-boot-starter-parent:2.7.15`. That gives every child module the Java level, plugin versions (compiler, Surefire 2.22.2 with JUnit 5) and Spring Boot dependency versions.
 * `java.version=17` in the parent becomes `release=17`. **Never add `<source>`/`<target>` to a module's `maven-compiler-plugin`**, because that overrides the parent. IntelliJ's *"Set language level to …"* quick-fix does exactly that, so decline it and use *Maven → Reload All Projects* instead.
 * Spring Cloud is imported per module through `spring-cloud.version`. Check the module's own pom before adding cloud dependencies, because the versions differ (2021.0.1 / .2 / .8).
 * `ai-service`, `project-service` and `urlshortner` use their own Spring Boot parent (3.3 / 4.0) and are on `jakarta.*`. All the other modules are on `javax.*`.
@@ -106,9 +127,9 @@ The state of the other test classes:
 
 | Kind | Where | Status |
 |---|---|---|
-| Pure unit tests | `AuthenticationFilterTest` (gateway), `GatewayAuthFilterTest` + `EmployeeBoJsonTest` (employee), `UserJsonTest` (authentication), `CompanyPasswordJsonTest` (company) | ✅ pass, no infrastructure needed |
+| Pure unit tests | `AuthenticationFilterTest` (gateway), `GatewayAuthFilterTest` + `EmployeeBoJsonTest` (employee), `UserJsonTest` (authentication), `CompanyPasswordJsonTest` (company), `RoleServiceImplTest` (authorization) | ✅ pass, no infrastructure needed |
 | Full-context controller tests (start Tomcat + JPA) | account `AccountControllerTest`, customer `CustomerTestController`, lead `LeadControllerTest` | ❌ need `GATEWAY_SECRET` set **and** the MySQL schema. They're integration tests, not unit tests. |
-| Mis-packaged tests | opportunity `com.techymeet…OpportunityTest`, product `com.softtwig…ProductControllerTest`, employee `com.microservices.accountservice…` | ❌ fail with "Unable to find a @SpringBootConfiguration" because they sit in packages copied from other projects |
+| Full-context tests formerly in foreign packages | opportunity `OpportunityTest`, product `ProductControllerTest` | ❌ need `GATEWAY_SECRET` and the MySQL schema (product also RabbitMQ). Since the package rename they find the application class; before, they could never start |
 | `*ApplicationTests.contextLoads` | every module | need the module's full infrastructure (DB, secrets, Eureka optional) |
 
 Running `mvn test` from the root therefore needs MySQL with the schemas and the env vars set, or `-DskipTests`.
@@ -117,7 +138,7 @@ Running `mvn test` from the root therefore needs MySQL with the schemas and the 
 
 These are the conventions of the newer services (employee, authorization, authentication). Follow them in new code.
 
-* **Base package** `com.microservices.<service>`. The authentication module keeps the historical spelling `authendicationservice`.
+* **Base package** `com.clinch.crm.<service>` (the product is called Clinch), e.g. `com.clinch.crm.authentication`, `com.clinch.crm.employee`. Every module follows it, so does new code.
 * **Packages:** `controller`, `service` (interface + `*ServiceImpl`), `repository` (Spring Data JPA), `entity` (JPA entities, suffix **`Vo`**), `model` (DTOs, suffix **`Bo`**), `common` (`ApiResponse`, exceptions, `GlobalExceptionHandler`), `SyncCall` (Feign clients), `gatewayauth` (gateway-secret filter).
 * **Controllers** return `ResponseEntity<ApiResponse<T>>` built with `ApiResponse.success(...)` / `ApiResponse.error(...)`, use Lombok `@RequiredArgsConstructor` constructor injection, and take `@Valid @RequestBody`.
 * **Errors** go through a `@RestControllerAdvice` `GlobalExceptionHandler`. Don't `catch (Exception e) { e.printStackTrace(); }`.
@@ -135,7 +156,7 @@ Older services (account, lead, customer, inventory, opportunity, salesorder, com
 
 ### Add a new service
 
-1. Create the module and inherit `mycrm-parent` (`<relativePath>../pom.xml</relativePath>`). Add it to the root `<modules>`. Don't configure `maven-compiler-plugin`.
+1. Create the module with groupId `com.clinch`, artifactId = folder name, base package `com.clinch.crm.<service>`, and inherit `com.clinch:clinch-parent` (`<relativePath>../pom.xml</relativePath>`). Add it to the root `<modules>`. Don't configure `maven-compiler-plugin`.
 2. Add `spring-cloud-starter-netflix-eureka-client` and the `spring-cloud-dependencies` import (use 2021.0.8).
 3. In `application.properties`, set `spring.application.name`, a free `server.port`, `eureka.client.serviceUrl.defaultZone=http://localhost:8555/eureka` and `gateway.secret=${GATEWAY_SECRET}`.
 4. Copy `gatewayauth/GatewayAuthFilter.java` from another service into `<base>.gatewayauth`. If the service calls others through Feign, also copy `GatewaySecretFeignInterceptor.java`.

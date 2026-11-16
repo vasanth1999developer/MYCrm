@@ -17,7 +17,7 @@ Intended home of **sales orders, quotes and invoices**. Today, only **quotes** a
 | Gateway prefix | `/salesorder` |
 | Database | MySQL `ms_mybiz_salesorder` |
 | Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.8 · Spring Data JPA · springdoc |
-| Base package | `com.microservice.salesorder` |
+| Base package | `com.clinch.crm.salesorder` |
 | Needs | MySQL schema, env var `GATEWAY_SECRET` |
 
 ## Run
@@ -79,7 +79,7 @@ No outgoing calls. The planned flow is that placing an order publishes `{product
 ## Code layout
 
 ```
-com.microservice.salesorder
+com.clinch.crm.salesorder
 ├── controller/   SalesOrderController (stubs), QuotesController, InvoiceController (empty)
 ├── service/  repository/
 ├── entity/       QuotesEntity, SalesOrderEntity, InvoiceEntity

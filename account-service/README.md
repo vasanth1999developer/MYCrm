@@ -11,7 +11,7 @@ Manages **accounts**: the companies or organisations you do business with. It co
 | Gateway prefix | `/account` |
 | Database | MySQL `ms_mybiz_account` |
 | Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.8 · Spring Data JPA · OpenCSV / Commons CSV · springdoc |
-| Base package | `com.microservices.account` (CSV export helper in `com.microservice.account.export`) |
+| Base package | `com.clinch.crm.account` |
 | Needs | MySQL schema, env var `GATEWAY_SECRET` |
 
 ## Run
@@ -64,15 +64,15 @@ No outgoing calls. It's called by clients through the gateway, and requests need
 ## Code layout
 
 ```
-com.microservices.account
+com.clinch.crm.account
 ├── controller/   AccountController
 ├── service/      AccountService(+Impl)
 ├── dao/          AccountDAO(+Impl)
 ├── repositry/    AccountRepository   (sic)
 ├── entity/       AccountVO, BaseVO
 ├── model/        AccountBO, BaseBO
+├── export/       CsvExport (static CSV helper)
 └── gatewayauth/  GatewayAuthFilter
-com.microservice.account.export/CsvExport   ← note: singular "microservice"
 ```
 
 `bin/` contains stale IDE build output. Ignore it (it's tracked in git and should be removed).
@@ -84,6 +84,5 @@ com.microservice.account.export/CsvExport   ← note: singular "microservice"
 ## Known issues
 
 * The controller injects the repository directly next to the service, and uses `try/catch(Exception)` → 500.
-* Two base packages (`com.microservices.account` and `com.microservice.account`).
 
 See [docs/KNOWN_ISSUES.md](../docs/KNOWN_ISSUES.md).

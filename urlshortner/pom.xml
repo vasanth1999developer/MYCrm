@@ -8,11 +8,11 @@
         <version>4.0.3</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.example</groupId>
+    <groupId>com.clinch</groupId>
     <artifactId>urlshortner</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>urlshortner</name>
-    <description>urlshortner</description>
+    <description>Clinch CRM: URL shortener</description>
     <url/>
     <licenses>
         <license/>

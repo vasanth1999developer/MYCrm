@@ -4,16 +4,16 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>com.mycrm</groupId>
-		<artifactId>mycrm-parent</artifactId>
+		<groupId>com.clinch</groupId>
+		<artifactId>clinch-parent</artifactId>
 		<version>1.0.0</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
-	<groupId>com.fynct</groupId>
+	<groupId>com.clinch</groupId>
 	<artifactId>TaskManagement</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>TaskManagement</name>
-	<description>Task project for Spring Boot</description>
+	<description>Clinch CRM: tasks</description>
 	<url />
 	<licenses>
 		<license />

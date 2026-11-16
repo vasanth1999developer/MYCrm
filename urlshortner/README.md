@@ -11,10 +11,10 @@ A **placeholder** for an internal URL-shortening utility. It's a freshly generat
 | Gateway prefix | — (no route) |
 | Database | none |
 | Stack | **Spring Boot 4.0.3** (`jakarta.*`) · `spring-boot-starter-webmvc` · `spring-boot-starter-restclient` · Lombok |
-| Base package | `com.example.urlshortner` |
+| Base package | `com.clinch.crm.urlshortener` |
 | Needs | nothing |
 
-It **is** listed in the root `<modules>`, so `mvn install` from the root builds it, but it uses its own Spring Boot 4 parent instead of `mycrm-parent`.
+It **is** listed in the root `<modules>`, so `mvn install` from the root builds it, but it uses its own Spring Boot 4 parent instead of `clinch-parent`.
 
 ## Run
 
@@ -25,7 +25,7 @@ cd urlshortner && ./mvnw spring-boot:run
 ## What's there
 
 ```
-com.example.urlshortner
+com.clinch.crm.urlshortener
 └── UrlshortnerApplication.java
 ```
 
@@ -37,6 +37,5 @@ com.example.urlshortner
 
 ## Before building features
 
-* Rename the package from `com.example` to the platform convention (`com.microservices.urlshortner`).
 * Decide on a Boot generation (see [project-service/README.md](../project-service/README.md#building-it-out-checklist)), and give it a port that doesn't collide with others (8080 is commonly taken).
 * If it's exposed to users, register it in Eureka, add `GatewayAuthFilter` and a gateway route.

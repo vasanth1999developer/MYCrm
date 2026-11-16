@@ -28,15 +28,15 @@ mvn -pl employee-service test -Dtest=EmployeeServiceImplTest
 mvn -pl employee-service test -Dtest=EmployeeServiceImplTest#createsEmployee
 ```
 
-The only real unit tests are `AuthenticationFilterTest` (gateway-service), `GatewayAuthFilterTest` and `EmployeeBoJsonTest` (employee-service), `UserJsonTest` (authentication-service) and `CompanyPasswordJsonTest` (company-service). They need no infrastructure. The other test classes boot the full app. The gateway and all routed services need the `JWT_SECRET` and `GATEWAY_SECRET` env vars set to start. There is no linter or formatter configured.
+The only real unit tests are `AuthenticationFilterTest` (gateway-service), `GatewayAuthFilterTest` and `EmployeeBoJsonTest` (employee-service), `UserJsonTest` (authentication-service), `CompanyPasswordJsonTest` (company-service) and `RoleServiceImplTest` (authorization-service, whose `mvnw` is broken, so use a system `mvn`). They need no infrastructure. The other test classes boot the full app. The gateway and all routed services need `JWT_SECRET` and `GATEWAY_SECRET` to start: as env vars, or (local dev) in the git-ignored `local-secrets.properties` at the repo root, which every service imports via `spring.config.import` (env vars win). Never commit secrets to `application.properties`. There is no linter or formatter configured.
 
 **Startup order:** `eureka-service` (8555) first, then `gateway-service` (8556), then any business services. Most services need a local MySQL at `localhost:3306` (`root`/`admin`), using one database per service (`ms_mybiz_<service>`). Hibernate runs with `ddl-auto=update`, which creates **tables** but not the **database**, so create each `ms_mybiz_*` schema first (the list is in `docs/DEVELOPMENT.md`). `TaskManagement` uses PostgreSQL (`taskdb`) instead.
 
 ## Build gotchas
 
-- **Java 17 is set in one place.** The root `pom.xml` (`mycrm-parent`) inherits `spring-boot-starter-parent:2.7.15`, which turns `java.version=17` into `release=17` and supplies the plugin versions (JUnit 5-capable Surefire 2.22.2). **Don't add `<source>`/`<target>` to a module's `maven-compiler-plugin`**, because that overrides the parent. IntelliJ's "Set language level" quick-fix does exactly that, so decline it and reload the Maven project instead.
-- **Mixed Spring Boot generations.** `mycrm-parent` pins **Spring Boot 2.7.15**. Most services inherit it, so they use `javax.*` (for example `javax.validation`), not `jakarta.*`, and Spring Cloud `2021.0.x`. The README says "Spring Boot 3.x", but that's wrong for these modules.
-- Several modules don't use `mycrm-parent` at all: `ai-service` uses Boot 3.3.0, and `project-service` and `urlshortner` use Boot 4.0.3, so all three are on `jakarta.*`. `ai-service` and `project-service` are **not** listed in the root `<modules>`, so build them from their own directories.
+- **Java 17 is set in one place.** The root `pom.xml` (`com.clinch:clinch-parent`; every module uses groupId `com.clinch`) inherits `spring-boot-starter-parent:2.7.15`, which turns `java.version=17` into `release=17` and supplies the plugin versions (JUnit 5-capable Surefire 2.22.2). **Don't add `<source>`/`<target>` to a module's `maven-compiler-plugin`**, because that overrides the parent. IntelliJ's "Set language level" quick-fix does exactly that, so decline it and reload the Maven project instead.
+- **Mixed Spring Boot generations.** `clinch-parent` pins **Spring Boot 2.7.15**. Most services inherit it, so they use `javax.*` (for example `javax.validation`), not `jakarta.*`, and Spring Cloud `2021.0.x`. The README says "Spring Boot 3.x", but that's wrong for these modules.
+- Several modules don't use `clinch-parent` at all: `ai-service` uses Boot 3.3.0, and `project-service` and `urlshortner` use Boot 4.0.3, so all three are on `jakarta.*`. `ai-service` and `project-service` are **not** listed in the root `<modules>`, so build them from their own directories.
 - Spring Cloud versions differ between services (2021.0.1, 2021.0.2 and 2021.0.8). Check the service's own pom before adding cloud dependencies.
 
 ## Architecture
@@ -71,7 +71,7 @@ Synchronous calls use OpenFeign interfaces in a `SyncCall` package inside each s
 ### Per-service code conventions (newer services: employee, authorization, authentication)
 - Packages: `controller`, `service` (interface + `*ServiceImpl`), `repository` (Spring Data JPA), `entity` (JPA entities, suffix **`Vo`**), `model` (DTOs, suffix **`Bo`**), `common` (`ApiResponse`, exceptions, `GlobalExceptionHandler`), `SyncCall` (Feign clients).
 - Controllers return `ResponseEntity<ApiResponse<T>>` built with `ApiResponse.success(...)` / `ApiResponse.error(...)`. They use Lombok `@RequiredArgsConstructor` constructor injection and `@Valid` request bodies.
-- The base package is `com.microservices.<service>`. The authentication module's package is spelled `authendicationservice`, so keep that spelling.
+- The base package is `com.clinch.crm.<service>` in every module (the product is called Clinch), e.g. `com.clinch.crm.authentication`, `com.clinch.crm.gateway`. Keep the database schema `ms_mybiz_authendication` as is.
 
 ### Other modules
 - `ai-service`: calls the Claude API (through a `ClaudeClient` WebClient wrapper) to summarize lead activity. The key comes from `ANTHROPIC_API_KEY`. See `ai-service/README.md`.

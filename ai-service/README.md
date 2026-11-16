@@ -13,7 +13,7 @@ An AI integration microservice for MyCrm. Its first milestone is to **summarise 
 | Gateway prefix | — (no route; call it directly) |
 | Database | none. `spring.datasource` is configured, but no JPA or JDBC dependency is present, so it's ignored. |
 | Stack | **Spring Boot 3.3.0** (`jakarta.*`) · WebFlux `WebClient` · resilience4j retry (+ AOP) · Lombok |
-| Base package | `com.mycrm.aiservice` |
+| Base package | `com.clinch.crm.ai` |
 | Needs | `ANTHROPIC_API_KEY` |
 
 ## Run
@@ -78,7 +78,7 @@ The simplest fix is to **delete the unused trio** (`AnthropicClient`, `Anthropic
 ## Code layout
 
 ```
-com.mycrm.aiservice
+com.clinch.crm.ai
 ├── controller/  AiController
 ├── service/     LeadSummarizationService (live) · LeadSummaryService (unused, broken)
 ├── client/      ClaudeClient (live), ClaudeMessageRequest/Response · AnthropicClient (unused)

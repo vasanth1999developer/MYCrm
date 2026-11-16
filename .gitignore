@@ -21,6 +21,7 @@ Thumbs.db
 *.env
 application-prod.properties
 application-secret.properties
+local-secrets.properties
 
 # Logs
 *.log

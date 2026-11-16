@@ -2,6 +2,8 @@
 
 The **service registry** (Netflix Eureka server). Every service registers under its `spring.application.name`, and the gateway and Feign clients resolve `lb://<name>` addresses through it. Start it **first**. For background on why the platform uses service discovery, see [Purpose.md](Purpose.md).
 
+For a detailed, learning-oriented walkthrough of every REST endpoint (register, heartbeat, registry queries, status overrides…) with real requests and responses, see [ENDPOINTS.md](ENDPOINTS.md).
+
 ## At a glance
 
 | | |
@@ -10,7 +12,7 @@ The **service registry** (Netflix Eureka server). Every service registers under 
 | Dashboard | http://localhost:8555 |
 | Registry API | `GET http://localhost:8555/eureka/apps` |
 | Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.1 · `spring-cloud-starter-netflix-eureka-server` |
-| Base package | `com.microservices.eurekaservice` (one class, `EurekaServiceApplication`, `@EnableEurekaServer`) |
+| Base package | `com.clinch.crm.eureka` (one class, `EurekaServiceApplication`, `@EnableEurekaServer`) |
 | Needs | nothing. No database, no secrets. |
 
 ## Run

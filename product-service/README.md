@@ -14,7 +14,7 @@ A **product catalogue with stock control**. It provides CRUD for products, a sto
 | Database | MySQL `product_service` |
 | Messaging | RabbitMQ `localhost:5672`, `guest` / `guest`, consumes queue `FinalProductQueue` |
 | Stack | Spring Boot 2.7.15 · Spring Cloud 2021.0.8 · Spring Data JPA · Spring AMQP · LoadBalancer · springdoc |
-| Base package | `com.microservice.product` |
+| Base package | `com.clinch.crm.product` |
 | Needs | MySQL schema `product_service`, RabbitMQ (optional: the listener retries, but HTTP still works), env var `GATEWAY_SECRET` |
 
 ## Run
@@ -75,7 +75,7 @@ No outgoing HTTP calls. Incoming HTTP requests need `X-Gateway-Secret` (`gateway
 ## Code layout
 
 ```
-com.microservice.product
+com.clinch.crm.product
 ├── controller/   ProductController
 ├── service/      ProductServiceImpl (incl. reduceStock)
 ├── repository/   ProductRepository (soft-delete @Modifying queries)
@@ -86,7 +86,7 @@ com.microservice.product
 
 ## Tests
 
-Both test classes are in `com.softtwig.product…`, a package copied from another project, so they fail with "Unable to find a @SpringBootConfiguration".
+`ProductApplicationTests.contextLoads` and `controller/ProductControllerTest` both boot the full application (`@SpringBootTest`), so they need `GATEWAY_SECRET`, the `product_service` MySQL schema and RabbitMQ. (They used to sit in a package copied from another project and could never start.)
 
 ## Known issues
 

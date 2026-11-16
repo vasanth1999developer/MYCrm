@@ -53,13 +53,13 @@ The gateway also routes `/campaign/**` → `campaign-service` and `/contact/**` 
 | Layer | Technology |
 |---|---|
 | Language | Java 17 (all modules compile with `release=17`) |
-| Framework | Spring Boot **2.7.15** for everything under `mycrm-parent`; `ai-service` is Boot 3.3.0; `project-service` and `urlshortner` are Boot 4.0.3 |
+| Framework | Spring Boot **2.7.15** for everything under `clinch-parent`; `ai-service` is Boot 3.3.0; `project-service` and `urlshortner` are Boot 4.0.3 |
 | Cloud | Spring Cloud 2021.0.x — Netflix Eureka, Spring Cloud Gateway, OpenFeign, LoadBalancer |
 | Security | JWT (jjwt 0.11.5, HS256), Spring Security (authentication-service only), shared gateway secret |
 | Persistence | Spring Data JPA / Hibernate (`ddl-auto=update`); **MySQL** for most services, **PostgreSQL** for TaskManagement |
 | Messaging | RabbitMQ (product-service listener only) |
 | API docs | springdoc-openapi 1.7 (Swagger UI at `/swagger-url.html` on services that include it) |
-| Build | Maven, one root aggregator POM (`mycrm-parent`) |
+| Build | Maven, one root aggregator POM (`clinch-parent`) |
 
 > There is no Redis in the codebase, and PostgreSQL is used only by TaskManagement — earlier versions of this README said otherwise.
 
@@ -69,14 +69,14 @@ The gateway also routes `/campaign/**` → `campaign-service` and `/contact/**` 
 
 Prerequisites: **JDK 17**, **Maven 3.6+**, **MySQL 8** on `localhost:3306` (`root` / `admin`), and — only for TaskManagement / product-service — PostgreSQL and RabbitMQ. Full details in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-**1. Set the two shared secrets** (same values for every service). In PowerShell:
+**1. Create the two shared secrets** (same values for every service) in a git-ignored `local-secrets.properties` at the repo root. Every service imports it. In PowerShell, from the repo root:
 
 ```powershell
-$b = New-Object byte[] 64; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); setx JWT_SECRET ([Convert]::ToBase64String($b))
-$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); setx GATEWAY_SECRET ([Convert]::ToBase64String($b))
+$r=[Security.Cryptography.RandomNumberGenerator]::Create(); $j=New-Object byte[] 64; $r.GetBytes($j); $g=New-Object byte[] 32; $r.GetBytes($g)
+"JWT_SECRET=$([Convert]::ToBase64String($j))`nGATEWAY_SECRET=$([Convert]::ToBase64String($g))" | Set-Content -Encoding ascii local-secrets.properties
 ```
 
-Restart your terminal / IDE afterwards. Services refuse to start if either is missing.
+No restart is needed. Services refuse to start if either secret is missing. On servers, set `JWT_SECRET` / `GATEWAY_SECRET` as environment variables instead; they override the file. Details: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#2-environment-variables). **Never commit this file, or put the values in `application.properties`.**
 
 **2. Build** everything from the repo root:
 
@@ -102,7 +102,7 @@ Databases are created on first start (`ddl-auto=update`) as long as the MySQL sc
 curl -X POST http://localhost:8556/auth/signin \
   -H "Content-Type: application/json" \
   -d '{"username":"admin@example.com","password":"<password>"}'   # "username" must be the user's EMAIL
-# → { "success": true, "data": { "token": "eyJ…", "type": "Bearer", "id": 1, "roles": [...] } }
+# → { "success": true, "data": { "accessToken": "eyJ…", "tokenType": "Bearer", "id": 1, "roles": [...], ... } }
 
 curl http://localhost:8556/employee/list-employee -H "Authorization: Bearer eyJ…"
 ```
@@ -115,7 +115,7 @@ Always call services **through the gateway (`:8556`)**. Calling a service's own 
 
 ```
 MyCrm/
-├── pom.xml                  # mycrm-parent: aggregator + Spring Boot 2.7.15 parent + java.version=17
+├── pom.xml                  # clinch-parent: aggregator + Spring Boot 2.7.15 parent + java.version=17
 ├── docs/                    # project-level documentation
 ├── eureka-service/          # infrastructure
 ├── gateway-service/

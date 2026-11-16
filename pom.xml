@@ -12,9 +12,11 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.mycrm</groupId>
-    <artifactId>mycrm-parent</artifactId>
+    <groupId>com.clinch</groupId>
+    <artifactId>clinch-parent</artifactId>
     <version>1.0.0</version>
+    <name>clinch-parent</name>
+    <description>Clinch CRM: aggregator and shared Spring Boot 2.7 / Java 17 parent</description>
 
     <packaging>pom</packaging>
 
